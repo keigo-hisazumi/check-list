@@ -1,5 +1,6 @@
 <script setup lang="ts">
 import { ref, computed, watch, onMounted } from 'vue'
+import NavigationBar from './components/NavigationBar.vue'
 
 // チェックリスト項目の型定義
 interface ChecklistItem {
@@ -104,6 +105,7 @@ const totalCount = checklistItems.length
         すべてリセット
       </button>
     </div>
+    <NavigationBar />
   </div>
 </template>
 
@@ -113,7 +115,7 @@ const totalCount = checklistItems.length
   display: flex;
   justify-content: center;
   align-items: center;
-  padding: 20px;
+  padding: 20px 20px 80px 20px; /* 下部にナビゲーションバーのスペースを確保 */
 }
 
 .container {
