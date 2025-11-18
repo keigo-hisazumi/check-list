@@ -1,21 +1,51 @@
-# Template
+# チェックリスト
 
-このリポジトリは新しいプロジェクト用のテンプレートです。最小限の Issue / PR テンプレートと VSCode ワークスペース推奨設定を含みます。
+持ち物を確認するためのReactベースのチェックリストアプリケーションです。
 
-## 含まれるもの
-- .github/ISSUE_TEMPLATE/* — バグ報告・機能要望・質問のテンプレート
-- .github/PULL_REQUEST_TEMPLATE.md — Pull Request のテンプレート
-- .github/copilot-setup-steps.yml — GitHub Copilot Coding Agent のビルド環境設定（日本語フォント含む）
-- .vscode/extensions.json, .vscode/settings.json — VSCode 推奨拡張とワークスペース設定
-- LICENSE — MIT ライセンス
+## 機能
 
-## 使い方
-1. このテンプレートをクローンまたはフォークしてください。
-2. README の "置き換え" が必要な箇所（プロジェクト名や説明）を編集してください。
-3. 必要に応じてサンプルの starter ファイル (package.json / pyproject.toml 等) を追加してください。
+- ✅ チェックボックスで項目を確認
+- 💾 ブラウザのローカルストレージでチェック状態を自動保存
+- 📱 レスポンシブデザイン対応
+- 🔄 すべてのチェックをリセットする機能
+- 📊 進捗状況の表示
 
-## VSCode + GitHub Copilot 環境
-このテンプレートは VSCode と GitHub Copilot を使うワークフローを想定しています。.vscode/extensions.json に記載された拡張をおすすめします。
+## チェックリスト項目
+
+- マスク、手帳、教材
+- カギ、イヤホン、社員証
+- 名刺入れ、クシ、ハンカチ
+- 筆箱、充電器、財布、(日傘)
+- ポーチ類、(化粧ポーチ)
+- 弁当、カトラリー
+- (歯ブラシ)
+- 水筒
+
+※括弧付きの項目はオプション項目です。
+
+## セットアップ
+
+```bash
+# 依存関係のインストール
+npm install
+
+# 開発サーバーの起動
+npm run dev
+
+# プロダクションビルド
+npm run build
+
+# プロダクションビルドのプレビュー
+npm run preview
+```
+
+## 技術スタック
+
+- React 19
+- Vite 7
+- Local Storage API
 
 ## ライセンス
+
 MIT
+
