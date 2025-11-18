@@ -59,14 +59,12 @@ const handleCheckChange = (id: string) => {
 
 // リセットボタンのハンドラー
 const handleReset = () => {
-  if (window.confirm('すべてのチェックをリセットしますか？')) {
-    const resetState: Record<string, boolean> = {}
-    checklistItems.forEach(item => {
-      resetState[item.id] = false
-      localStorage.removeItem(item.id)
-    })
-    checkedItems.value = resetState
-  }
+  const resetState: Record<string, boolean> = {}
+  checklistItems.forEach(item => {
+    resetState[item.id] = false
+    localStorage.removeItem(item.id)
+  })
+  checkedItems.value = resetState
 }
 
 // 完了数を計算
@@ -91,10 +89,9 @@ const totalCount = checklistItems.length
             type="checkbox"
             :id="item.id"
             :checked="checkedItems[item.id]"
-            @change="handleCheckChange(item.id)"
-            @click.stop
+            @click.stop="handleCheckChange(item.id)"
           />
-          <label :for="item.id">
+          <label :for="item.id" @click.prevent>
             {{ item.label }}
             <span v-if="item.optional" class="optional">{{ item.optional }}</span>
           </label>
@@ -155,7 +152,6 @@ h1 {
 
 .checklist-item:hover {
   background: #e9ecef;
-  transform: translateX(5px);
 }
 
 .checklist-item.checked {
