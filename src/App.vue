@@ -5,7 +5,6 @@ import { ref, computed, watch, onMounted } from 'vue'
 interface ChecklistItem {
   id: string
   label: string
-  optional?: string
 }
 
 // チェックリスト項目の定義
@@ -13,10 +12,10 @@ const checklistItems: ChecklistItem[] = [
   { id: 'mask', label: 'マスク、手帳、教材' },
   { id: 'keys', label: 'カギ、イヤホン、社員証' },
   { id: 'card-case', label: '名刺入れ、クシ、ハンカチ' },
-  { id: 'pen-case', label: '筆箱、充電器、財布、', optional: '(日傘)' },
-  { id: 'pouch', label: 'ポーチ類、', optional: '(化粧ポーチ)' },
+  { id: 'pen-case', label: '筆箱、充電器、財布、(日傘)' },
+  { id: 'pouch', label: 'ポーチ類、(化粧ポーチ)' },
   { id: 'lunch', label: '弁当、カトラリー' },
-  { id: 'toothbrush', label: '', optional: '(歯ブラシ)' },
+  { id: 'toothbrush', label: '(歯ブラシ)' },
   { id: 'bottle', label: '水筒' },
 ]
 
@@ -93,7 +92,6 @@ const totalCount = checklistItems.length
           />
           <label :for="item.id" @click.prevent>
             {{ item.label }}
-            <span v-if="item.optional" class="optional">{{ item.optional }}</span>
           </label>
         </li>
       </ul>
@@ -178,11 +176,6 @@ h1 {
   font-size: 1.1em;
   color: #333;
   user-select: none;
-}
-
-.optional {
-  color: #6c757d;
-  font-style: italic;
 }
 
 .reset-button {
