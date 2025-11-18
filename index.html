@@ -1,0 +1,251 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>チェックリスト</title>
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        body {
+            font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", "Hiragino Sans", "Hiragino Kaku Gothic ProN", "Noto Sans JP", Meiryo, sans-serif;
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            min-height: 100vh;
+            padding: 20px;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+        }
+
+        .container {
+            background: white;
+            border-radius: 20px;
+            box-shadow: 0 20px 60px rgba(0, 0, 0, 0.3);
+            padding: 40px;
+            max-width: 600px;
+            width: 100%;
+        }
+
+        h1 {
+            color: #333;
+            text-align: center;
+            margin-bottom: 30px;
+            font-size: 2em;
+        }
+
+        .checklist {
+            list-style: none;
+        }
+
+        .checklist-item {
+            display: flex;
+            align-items: center;
+            padding: 15px;
+            margin-bottom: 10px;
+            background: #f8f9fa;
+            border-radius: 10px;
+            transition: all 0.3s ease;
+            cursor: pointer;
+        }
+
+        .checklist-item:hover {
+            background: #e9ecef;
+            transform: translateX(5px);
+        }
+
+        .checklist-item.checked {
+            background: #d4edda;
+            opacity: 0.7;
+        }
+
+        .checklist-item.checked label {
+            text-decoration: line-through;
+            color: #6c757d;
+        }
+
+        .checklist-item input[type="checkbox"] {
+            width: 24px;
+            height: 24px;
+            margin-right: 15px;
+            cursor: pointer;
+            accent-color: #667eea;
+        }
+
+        .checklist-item label {
+            cursor: pointer;
+            flex: 1;
+            font-size: 1.1em;
+            color: #333;
+            user-select: none;
+        }
+
+        .optional {
+            color: #6c757d;
+            font-style: italic;
+        }
+
+        .reset-button {
+            margin-top: 30px;
+            width: 100%;
+            padding: 15px;
+            background: #667eea;
+            color: white;
+            border: none;
+            border-radius: 10px;
+            font-size: 1.1em;
+            cursor: pointer;
+            transition: background 0.3s ease;
+        }
+
+        .reset-button:hover {
+            background: #5568d3;
+        }
+
+        .progress {
+            margin-top: 20px;
+            text-align: center;
+            font-size: 1.2em;
+            color: #667eea;
+            font-weight: bold;
+        }
+
+        @media (max-width: 600px) {
+            .container {
+                padding: 20px;
+            }
+
+            h1 {
+                font-size: 1.5em;
+            }
+
+            .checklist-item label {
+                font-size: 1em;
+            }
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <h1>📋 チェックリスト</h1>
+        <ul class="checklist" id="checklist">
+            <li class="checklist-item">
+                <input type="checkbox" id="item1" data-item="mask">
+                <label for="item1">マスク、手帳、教材</label>
+            </li>
+            <li class="checklist-item">
+                <input type="checkbox" id="item2" data-item="keys">
+                <label for="item2">カギ、イヤホン、社員証</label>
+            </li>
+            <li class="checklist-item">
+                <input type="checkbox" id="item3" data-item="card-case">
+                <label for="item3">名刺入れ、クシ、ハンカチ</label>
+            </li>
+            <li class="checklist-item">
+                <input type="checkbox" id="item4" data-item="pen-case">
+                <label for="item4">筆箱、充電器、財布、<span class="optional">(日傘)</span></label>
+            </li>
+            <li class="checklist-item">
+                <input type="checkbox" id="item5" data-item="pouch">
+                <label for="item5">ポーチ類、<span class="optional">(化粧ポーチ)</span></label>
+            </li>
+            <li class="checklist-item">
+                <input type="checkbox" id="item6" data-item="lunch">
+                <label for="item6">弁当、カトラリー</label>
+            </li>
+            <li class="checklist-item">
+                <input type="checkbox" id="item7" data-item="toothbrush">
+                <label for="item7"><span class="optional">(歯ブラシ)</span></label>
+            </li>
+            <li class="checklist-item">
+                <input type="checkbox" id="item8" data-item="bottle">
+                <label for="item8">水筒</label>
+            </li>
+        </ul>
+        <div class="progress" id="progress">0 / 8 完了</div>
+        <button class="reset-button" id="resetBtn">すべてリセット</button>
+    </div>
+
+    <script>
+        // チェック状態を管理
+        const checklist = document.getElementById('checklist');
+        const progressDiv = document.getElementById('progress');
+        const resetBtn = document.getElementById('resetBtn');
+        const checkboxes = document.querySelectorAll('input[type="checkbox"]');
+
+        // ローカルストレージからチェック状態を読み込む
+        function loadChecklistState() {
+            checkboxes.forEach(checkbox => {
+                const itemKey = checkbox.dataset.item;
+                const isChecked = localStorage.getItem(itemKey) === 'true';
+                checkbox.checked = isChecked;
+                updateItemStyle(checkbox);
+            });
+            updateProgress();
+        }
+
+        // チェック状態をローカルストレージに保存
+        function saveChecklistState(checkbox) {
+            const itemKey = checkbox.dataset.item;
+            localStorage.setItem(itemKey, checkbox.checked);
+        }
+
+        // アイテムのスタイルを更新
+        function updateItemStyle(checkbox) {
+            const listItem = checkbox.closest('.checklist-item');
+            if (checkbox.checked) {
+                listItem.classList.add('checked');
+            } else {
+                listItem.classList.remove('checked');
+            }
+        }
+
+        // 進捗状況を更新
+        function updateProgress() {
+            const total = checkboxes.length;
+            const checked = Array.from(checkboxes).filter(cb => cb.checked).length;
+            progressDiv.textContent = `${checked} / ${total} 完了`;
+        }
+
+        // チェックボックスの変更イベント
+        checkboxes.forEach(checkbox => {
+            checkbox.addEventListener('change', function() {
+                saveChecklistState(this);
+                updateItemStyle(this);
+                updateProgress();
+            });
+        });
+
+        // リストアイテム全体をクリックしたときもチェック状態を切り替え
+        document.querySelectorAll('.checklist-item').forEach(item => {
+            item.addEventListener('click', function(e) {
+                if (e.target.tagName !== 'INPUT') {
+                    const checkbox = this.querySelector('input[type="checkbox"]');
+                    checkbox.checked = !checkbox.checked;
+                    saveChecklistState(checkbox);
+                    updateItemStyle(checkbox);
+                    updateProgress();
+                }
+            });
+        });
+
+        // リセットボタン
+        resetBtn.addEventListener('click', function() {
+            if (confirm('すべてのチェックをリセットしますか？')) {
+                checkboxes.forEach(checkbox => {
+                    checkbox.checked = false;
+                    localStorage.removeItem(checkbox.dataset.item);
+                    updateItemStyle(checkbox);
+                });
+                updateProgress();
+            }
+        });
+
+        // 初期読み込み
+        loadChecklistState();
+    </script>
+</body>
+</html>
