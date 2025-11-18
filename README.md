@@ -1,6 +1,6 @@
 # チェックリスト
 
-持ち物を確認するためのReactベースのチェックリストアプリケーションです。
+持ち物を確認するためのVue.js + TypeScriptベースのチェックリストアプリケーションです。
 
 ## 機能
 
@@ -41,7 +41,8 @@ npm run preview
 
 ## 技術スタック
 
-- React 19
+- Vue 3 (Composition API)
+- TypeScript
 - Vite 7
 - Local Storage API
 
