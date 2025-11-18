@@ -1,0 +1,25 @@
+{
+  "name": "チェックリスト",
+  "short_name": "チェックリスト",
+  "description": "持ち物を確認するためのチェックリストアプリケーション",
+  "start_url": "/check-list/",
+  "scope": "/check-list/",
+  "display": "standalone",
+  "background_color": "#667eea",
+  "theme_color": "#667eea",
+  "orientation": "portrait",
+  "icons": [
+    {
+      "src": "/check-list/icon-192x192.png",
+      "sizes": "192x192",
+      "type": "image/png",
+      "purpose": "maskable any"
+    },
+    {
+      "src": "/check-list/icon-512x512.png",
+      "sizes": "512x512",
+      "type": "image/png",
+      "purpose": "maskable any"
+    }
+  ]
+}
