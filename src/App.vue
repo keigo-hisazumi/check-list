@@ -115,7 +115,7 @@ const totalCount = checklistItems.length
   display: flex;
   justify-content: center;
   align-items: center;
-  padding: 20px 20px 80px 20px; /* 下部にナビゲーションバーのスペースを確保 */
+  padding: 20px;
 }
 
 .container {
@@ -125,6 +125,7 @@ const totalCount = checklistItems.length
   padding: 40px;
   max-width: 600px;
   width: 100%;
+  margin-bottom: 100px; /* ナビゲーションバーとの重なりを防ぐ */
 }
 
 h1 {
