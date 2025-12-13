@@ -1,5 +1,5 @@
 <script setup lang="ts">
-import { ref } from 'vue'
+import { ref, computed } from 'vue'
 import NavigationBar from './components/NavigationBar.vue'
 import MorningChecklist from './components/MorningChecklist.vue'
 import BagChecklist from './components/BagChecklist.vue'
@@ -9,6 +9,9 @@ const activeView = ref<string>('morning')
 
 // ビューのリスト
 const views = ['morning', 'bag']
+
+// 現在のインデックスを計算
+const currentIndex = computed(() => views.indexOf(activeView.value))
 
 // ナビゲーション変更ハンドラー
 const handleNavChange = (viewId: string) => {
@@ -100,14 +103,16 @@ const handleTouchEnd = () => {
       <div 
         class="view-slider"
         :style="{
-          transform: `translateX(${translateX}px)`,
+          transform: `translateX(calc(-${currentIndex * 100}% + ${translateX}px))`,
           transition: isTransitioning ? `transform ${transitionDuration}ms ease-out` : 'none'
         }"
       >
-        <Transition name="slide" mode="out-in">
-          <MorningChecklist v-if="activeView === 'morning'" key="morning" />
-          <BagChecklist v-else-if="activeView === 'bag'" key="bag" />
-        </Transition>
+        <div class="view-wrapper">
+          <MorningChecklist key="morning" />
+        </div>
+        <div class="view-wrapper">
+          <BagChecklist key="bag" />
+        </div>
       </div>
     </div>
   </div>
@@ -125,42 +130,31 @@ const handleTouchEnd = () => {
 .view-container {
   flex: 1;
   display: flex;
-  justify-content: center;
+  justify-content: flex-start;
   align-items: flex-start;
   width: 100%;
-  padding: 20px;
   position: relative;
   overflow: hidden;
 }
 
 .view-slider {
-  width: 100%;
   display: flex;
-  justify-content: center;
+  width: 100%;
   will-change: transform;
 }
 
-/* スライドトランジション（transitionDuration: 300msと同期） */
-.slide-enter-active,
-.slide-leave-active {
-  transition: opacity 0.3s ease-out;
-}
-
-.slide-enter-from {
-  opacity: 0;
-}
-
-.slide-leave-to {
-  opacity: 0;
-}
-
-.slide-enter-to,
-.slide-leave-from {
-  opacity: 1;
+.view-wrapper {
+  flex: 0 0 100%;
+  width: 100%;
+  display: flex;
+  justify-content: center;
+  align-items: flex-start;
+  padding: 20px;
+  box-sizing: border-box;
 }
 
 @media (max-width: 600px) {
-  .view-container {
+  .view-wrapper {
     padding: 0;
   }
 }
