@@ -123,7 +123,7 @@ const totalCount = checklistItems.length
   padding: 40px;
   max-width: 600px;
   width: 100%;
-  margin-bottom: 100px; /* ナビゲーションバーとの重なりを防ぐ */
+  margin-bottom: calc(100px + env(safe-area-inset-bottom)); /* ナビゲーションバーとの重なりを防ぐ（セーフエリア考慮） */
 }
 
 h1 {
@@ -217,7 +217,7 @@ h1 {
     box-shadow: none;
     padding: 16px;
     min-height: 100vh;
-    margin-bottom: 80px; /* ナビゲーションバーの高さに合わせて調整 */
+    margin-bottom: calc(80px + env(safe-area-inset-bottom)); /* ナビゲーションバーの高さに合わせて調整（セーフエリア考慮） */
   }
 
   h1 {
