@@ -25,6 +25,8 @@ const translateX = ref<number>(0)
 const isTransitioning = ref<boolean>(false)
 const isSwiping = ref<boolean>(false)
 const swipeThreshold = 100 // 画面遷移を確定するしきい値（ピクセル）
+const edgeResistance = 0.3 // 端での抵抗感の係数
+const transitionDuration = 300 // トランジション時間（ミリ秒）
 
 // タッチ開始イベント
 const handleTouchStart = (e: TouchEvent) => {
@@ -48,7 +50,7 @@ const handleTouchMove = (e: TouchEvent) => {
   if ((currentIndex === 0 && diff > 0) || 
       (currentIndex === views.length - 1 && diff < 0)) {
     // 端での抵抗感を表現（スワイプ量を減衰）
-    translateX.value = diff * 0.3
+    translateX.value = diff * edgeResistance
   } else {
     translateX.value = diff
   }
@@ -79,7 +81,7 @@ const handleTouchEnd = () => {
   // トランジション完了後にフラグをリセット
   setTimeout(() => {
     isTransitioning.value = false
-  }, 300)
+  }, transitionDuration)
 }
 </script>
 
@@ -99,7 +101,7 @@ const handleTouchEnd = () => {
         class="view-slider"
         :style="{
           transform: `translateX(${translateX}px)`,
-          transition: isTransitioning ? 'transform 0.3s ease-out' : 'none'
+          transition: isTransitioning ? `transform ${transitionDuration}ms ease-out` : 'none'
         }"
       >
         <Transition name="slide" mode="out-in">
@@ -138,7 +140,7 @@ const handleTouchEnd = () => {
   will-change: transform;
 }
 
-/* スライドトランジション */
+/* スライドトランジション（transitionDuration: 300msと同期） */
 .slide-enter-active,
 .slide-leave-active {
   transition: opacity 0.3s ease-out;
