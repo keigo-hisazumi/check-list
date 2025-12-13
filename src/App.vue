@@ -22,33 +22,32 @@ const minSwipeDistance = 50 // 最小スワイプ距離（ピクセル）
 
 // タッチ開始イベント
 const handleTouchStart = (e: TouchEvent) => {
-  touchStartX.value = e.touches[0].clientX
+  if (e.touches.length > 0) {
+    touchStartX.value = e.touches[0].clientX
+  }
 }
 
 // タッチ終了イベント
 const handleTouchEnd = (e: TouchEvent) => {
-  touchEndX.value = e.changedTouches[0].clientX
-  handleSwipe()
+  if (e.changedTouches.length > 0) {
+    touchEndX.value = e.changedTouches[0].clientX
+    handleSwipe()
+  }
 }
 
 // スワイプ判定と画面遷移
 const handleSwipe = () => {
   const swipeDistance = touchEndX.value - touchStartX.value
+  const currentIndex = views.indexOf(activeView.value)
   
   // 右スワイプ（前の画面へ）
-  if (swipeDistance > minSwipeDistance) {
-    const currentIndex = views.indexOf(activeView.value)
-    if (currentIndex > 0) {
-      activeView.value = views[currentIndex - 1]
-    }
+  if (swipeDistance > minSwipeDistance && currentIndex > 0) {
+    activeView.value = views[currentIndex - 1]
   }
   
   // 左スワイプ（次の画面へ）
-  if (swipeDistance < -minSwipeDistance) {
-    const currentIndex = views.indexOf(activeView.value)
-    if (currentIndex < views.length - 1) {
-      activeView.value = views[currentIndex + 1]
-    }
+  if (swipeDistance < -minSwipeDistance && currentIndex < views.length - 1) {
+    activeView.value = views[currentIndex + 1]
   }
 }
 </script>
