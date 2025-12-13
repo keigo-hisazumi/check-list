@@ -13,42 +13,73 @@ const views = ['morning', 'bag']
 // ナビゲーション変更ハンドラー
 const handleNavChange = (viewId: string) => {
   activeView.value = viewId
+  // ナビゲーション変更時はスライドオフセットをリセット
+  translateX.value = 0
+  isTransitioning.value = false
 }
 
 // スワイプ機能の実装
 const touchStartX = ref<number>(0)
-const touchEndX = ref<number>(0)
-const minSwipeDistance = 50 // 最小スワイプ距離（ピクセル）
+const touchCurrentX = ref<number>(0)
+const translateX = ref<number>(0)
+const isTransitioning = ref<boolean>(false)
+const isSwiping = ref<boolean>(false)
+const swipeThreshold = 100 // 画面遷移を確定するしきい値（ピクセル）
 
 // タッチ開始イベント
 const handleTouchStart = (e: TouchEvent) => {
   if (e.touches.length > 0) {
     touchStartX.value = e.touches[0].clientX
+    touchCurrentX.value = e.touches[0].clientX
+    isSwiping.value = true
+    isTransitioning.value = false
+  }
+}
+
+// タッチ移動イベント - リアルタイムでスライド
+const handleTouchMove = (e: TouchEvent) => {
+  if (!isSwiping.value || e.touches.length === 0) return
+  
+  touchCurrentX.value = e.touches[0].clientX
+  const diff = touchCurrentX.value - touchStartX.value
+  const currentIndex = views.indexOf(activeView.value)
+  
+  // 端の画面では逆方向のスワイプを制限
+  if ((currentIndex === 0 && diff > 0) || 
+      (currentIndex === views.length - 1 && diff < 0)) {
+    // 端での抵抗感を表現（スワイプ量を減衰）
+    translateX.value = diff * 0.3
+  } else {
+    translateX.value = diff
   }
 }
 
 // タッチ終了イベント
-const handleTouchEnd = (e: TouchEvent) => {
-  if (e.changedTouches.length > 0) {
-    touchEndX.value = e.changedTouches[0].clientX
-    handleSwipe()
-  }
-}
-
-// スワイプ判定と画面遷移
-const handleSwipe = () => {
-  const swipeDistance = touchEndX.value - touchStartX.value
+const handleTouchEnd = () => {
+  if (!isSwiping.value) return
+  
+  isSwiping.value = false
+  const swipeDistance = touchCurrentX.value - touchStartX.value
   const currentIndex = views.indexOf(activeView.value)
   
+  isTransitioning.value = true
+  
   // 右スワイプ（前の画面へ）
-  if (swipeDistance > minSwipeDistance && currentIndex > 0) {
+  if (swipeDistance > swipeThreshold && currentIndex > 0) {
     activeView.value = views[currentIndex - 1]
   }
-  
   // 左スワイプ（次の画面へ）
-  if (swipeDistance < -minSwipeDistance && currentIndex < views.length - 1) {
+  else if (swipeDistance < -swipeThreshold && currentIndex < views.length - 1) {
     activeView.value = views[currentIndex + 1]
   }
+  
+  // スライドオフセットをリセット
+  translateX.value = 0
+  
+  // トランジション完了後にフラグをリセット
+  setTimeout(() => {
+    isTransitioning.value = false
+  }, 300)
 }
 </script>
 
@@ -56,6 +87,7 @@ const handleSwipe = () => {
   <div 
     class="app"
     @touchstart="handleTouchStart"
+    @touchmove="handleTouchMove"
     @touchend="handleTouchEnd"
   >
     <NavigationBar 
@@ -63,10 +95,18 @@ const handleSwipe = () => {
       @nav-change="handleNavChange" 
     />
     <div class="view-container">
-      <Transition name="slide">
-        <MorningChecklist v-if="activeView === 'morning'" key="morning" />
-        <BagChecklist v-else-if="activeView === 'bag'" key="bag" />
-      </Transition>
+      <div 
+        class="view-slider"
+        :style="{
+          transform: `translateX(${translateX}px)`,
+          transition: isTransitioning ? 'transform 0.3s ease-out' : 'none'
+        }"
+      >
+        <Transition name="slide" mode="out-in">
+          <MorningChecklist v-if="activeView === 'morning'" key="morning" />
+          <BagChecklist v-else-if="activeView === 'bag'" key="bag" />
+        </Transition>
+      </div>
     </div>
   </div>
 </template>
@@ -77,6 +117,7 @@ const handleSwipe = () => {
   display: flex;
   flex-direction: column;
   overflow-x: hidden;
+  touch-action: pan-y; /* 垂直スクロールのみを許可 */
 }
 
 .view-container {
@@ -87,28 +128,33 @@ const handleSwipe = () => {
   width: 100%;
   padding: 20px;
   position: relative;
+  overflow: hidden;
+}
+
+.view-slider {
+  width: 100%;
+  display: flex;
+  justify-content: center;
+  will-change: transform;
 }
 
 /* スライドトランジション */
 .slide-enter-active,
 .slide-leave-active {
-  transition: all 0.3s ease;
+  transition: opacity 0.3s ease-out;
 }
 
 .slide-enter-from {
   opacity: 0;
-  transform: translateX(30px);
 }
 
 .slide-leave-to {
   opacity: 0;
-  transform: translateX(-30px);
 }
 
 .slide-enter-to,
 .slide-leave-from {
   opacity: 1;
-  transform: translateX(0);
 }
 
 @media (max-width: 600px) {
