@@ -207,16 +207,41 @@ h1 {
 }
 
 @media (max-width: 600px) {
+  .app {
+    padding: 0;
+    align-items: flex-start;
+  }
+
   .container {
-    padding: 20px;
+    border-radius: 0;
+    box-shadow: none;
+    padding: 16px;
+    min-height: 100vh;
+    margin-bottom: 80px; /* ナビゲーションバーの高さに合わせて調整 */
   }
 
   h1 {
     font-size: 1.5em;
+    margin-bottom: 20px;
+  }
+
+  .checklist-item {
+    padding: 12px;
+    margin-bottom: 8px;
   }
 
   .checklist-item label {
     font-size: 1em;
+  }
+
+  .reset-button {
+    margin-top: 20px;
+    padding: 12px;
+  }
+
+  .progress {
+    margin-top: 16px;
+    font-size: 1.1em;
   }
 }
 </style>
