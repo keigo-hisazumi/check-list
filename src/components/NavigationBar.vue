@@ -57,6 +57,7 @@ const handleNavClick = (id: string) => {
   justify-content: space-around;
   align-items: center;
   padding: 8px 0;
+  padding-bottom: calc(8px + env(safe-area-inset-bottom));
 }
 
 .nav-item {
@@ -98,6 +99,7 @@ const handleNavClick = (id: string) => {
 @media (max-width: 600px) {
   .nav-container {
     padding: 6px 0;
+    padding-bottom: calc(6px + env(safe-area-inset-bottom));
   }
 
   .nav-item {
