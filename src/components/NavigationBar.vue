@@ -1,6 +1,4 @@
 <script setup lang="ts">
-import { ref } from 'vue'
-
 // ナビゲーション項目の型定義
 interface NavItem {
   id: string
@@ -8,20 +6,31 @@ interface NavItem {
   icon: string
 }
 
-// ナビゲーション項目の定義（スタブ）
+// ナビゲーション項目の定義
 const navItems: NavItem[] = [
-  { id: 'home', label: 'ホーム', icon: '🏠' },
-  { id: 'settings', label: '設定', icon: '⚙️' },
-  { id: 'about', label: 'その他', icon: '📌' },
+  { id: 'morning', label: '朝やること', icon: '🌅' },
+  { id: 'bag', label: 'カバンの中', icon: '🎒' },
 ]
 
-// アクティブな項目の管理
-const activeItem = ref<string>('home')
+// Props定義
+interface Props {
+  activeItem?: string
+}
 
-// ナビゲーション項目クリックハンドラー（スタブ）
+// Emits定義
+interface Emits {
+  (e: 'nav-change', id: string): void
+}
+
+const props = withDefaults(defineProps<Props>(), {
+  activeItem: 'morning'
+})
+
+const emit = defineEmits<Emits>()
+
+// ナビゲーション項目クリックハンドラー
 const handleNavClick = (id: string) => {
-  activeItem.value = id
-  // 今後、画面遷移ロジックをここに追加
+  emit('nav-change', id)
 }
 </script>
 
@@ -31,7 +40,7 @@ const handleNavClick = (id: string) => {
       <button
         v-for="item in navItems"
         :key="item.id"
-        :class="['nav-item', { active: activeItem === item.id }]"
+        :class="['nav-item', { active: props.activeItem === item.id }]"
         @click="handleNavClick(item.id)"
       >
         <span class="nav-icon">{{ item.icon }}</span>
