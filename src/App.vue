@@ -58,16 +58,16 @@ const handleSwipe = () => {
     @touchstart="handleTouchStart"
     @touchend="handleTouchEnd"
   >
+    <NavigationBar 
+      :active-item="activeView" 
+      @nav-change="handleNavChange" 
+    />
     <div class="view-container">
       <Transition name="slide">
         <MorningChecklist v-if="activeView === 'morning'" key="morning" />
         <BagChecklist v-else-if="activeView === 'bag'" key="bag" />
       </Transition>
     </div>
-    <NavigationBar 
-      :active-item="activeView" 
-      @nav-change="handleNavChange" 
-    />
   </div>
 </template>
 
@@ -75,15 +75,17 @@ const handleSwipe = () => {
 .app {
   min-height: 100vh;
   display: flex;
-  justify-content: center;
-  align-items: center;
-  padding: 20px;
+  flex-direction: column;
   overflow-x: hidden;
 }
 
 .view-container {
+  flex: 1;
+  display: flex;
+  justify-content: center;
+  align-items: flex-start;
   width: 100%;
-  max-width: 600px;
+  padding: 20px;
   position: relative;
 }
 
@@ -110,9 +112,8 @@ const handleSwipe = () => {
 }
 
 @media (max-width: 600px) {
-  .app {
+  .view-container {
     padding: 0;
-    align-items: flex-start;
   }
 }
 </style>

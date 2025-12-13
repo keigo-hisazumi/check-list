@@ -53,11 +53,11 @@ const handleNavClick = (id: string) => {
 <style scoped>
 .navigation-bar {
   position: fixed;
-  bottom: 0;
+  top: 0;
   left: 0;
   right: 0;
   background: white;
-  box-shadow: 0 -4px 20px rgba(0, 0, 0, 0.15);
+  box-shadow: 0 4px 20px rgba(0, 0, 0, 0.15);
   z-index: 1000;
 }
 
@@ -65,7 +65,7 @@ const handleNavClick = (id: string) => {
   display: flex;
   justify-content: space-around;
   align-items: center;
-  padding: 8px 0 calc(8px + env(safe-area-inset-bottom));
+  padding: calc(8px + env(safe-area-inset-top)) 0 8px;
 }
 
 .nav-item {
@@ -106,7 +106,7 @@ const handleNavClick = (id: string) => {
 
 @media (max-width: 600px) {
   .nav-container {
-    padding: 6px 0 calc(6px + env(safe-area-inset-bottom));
+    padding: calc(6px + env(safe-area-inset-top)) 0 6px;
   }
 
   .nav-item {
