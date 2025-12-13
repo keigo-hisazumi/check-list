@@ -75,7 +75,6 @@ const totalCount = checklistItems.length
 
 <template>
   <div class="container">
-    <h1>🎒 カバンの中</h1>
     <ul class="checklist">
       <li
         v-for="item in checklistItems"
@@ -94,12 +93,14 @@ const totalCount = checklistItems.length
         </label>
       </li>
     </ul>
-    <div class="progress">
-      {{ completedCount }} / {{ totalCount }} 完了
+    <div class="bottom-bar">
+      <div class="progress">
+        {{ completedCount }} / {{ totalCount }} 完了
+      </div>
+      <button class="reset-button" @click="handleReset">
+        すべてリセット
+      </button>
     </div>
-    <button class="reset-button" @click="handleReset">
-      すべてリセット
-    </button>
   </div>
 </template>
 
@@ -109,17 +110,10 @@ const totalCount = checklistItems.length
   border-radius: 20px;
   box-shadow: 0 20px 60px rgba(0, 0, 0, 0.3);
   padding: 40px;
+  padding-bottom: 140px; /* 下部バーの高さ分の余白 */
   max-width: 600px;
   width: 100%;
-  margin-bottom: calc(100px + env(safe-area-inset-bottom)); /* ナビゲーションバーとの重なりを防ぐ（セーフエリア考慮） */
-}
-
-h1 {
-  color: #333;
-  text-align: center;
-  margin-bottom: 30px;
-  font-size: 2em;
-  margin-top: 0;
+  margin-top: calc(80px + env(safe-area-inset-top)); /* ナビゲーションバーとの重なりを防ぐ */
 }
 
 .checklist {
@@ -169,8 +163,26 @@ h1 {
   user-select: none;
 }
 
+.bottom-bar {
+  position: fixed;
+  bottom: 0;
+  left: 0;
+  right: 0;
+  background: white;
+  box-shadow: 0 -4px 20px rgba(0, 0, 0, 0.15);
+  padding: 15px 20px calc(15px + env(safe-area-inset-bottom));
+  z-index: 999;
+}
+
+.progress {
+  text-align: center;
+  font-size: 1.2em;
+  color: #667eea;
+  font-weight: bold;
+  margin-bottom: 10px;
+}
+
 .reset-button {
-  margin-top: 30px;
   width: 100%;
   padding: 15px;
   background: #667eea;
@@ -186,26 +198,14 @@ h1 {
   background: #5568d3;
 }
 
-.progress {
-  margin-top: 20px;
-  text-align: center;
-  font-size: 1.2em;
-  color: #667eea;
-  font-weight: bold;
-}
-
 @media (max-width: 600px) {
   .container {
     border-radius: 0;
     box-shadow: none;
     padding: 16px;
+    padding-bottom: 140px;
     min-height: 100vh;
-    margin-bottom: calc(80px + env(safe-area-inset-bottom)); /* ナビゲーションバーの高さに合わせて調整（セーフエリア考慮） */
-  }
-
-  h1 {
-    font-size: 1.5em;
-    margin-bottom: 20px;
+    margin-top: calc(60px + env(safe-area-inset-top)); /* ナビゲーションバーの高さに合わせて調整 */
   }
 
   .checklist-item {
@@ -217,14 +217,17 @@ h1 {
     font-size: 1em;
   }
 
+  .bottom-bar {
+    padding: 12px 16px calc(12px + env(safe-area-inset-bottom));
+  }
+
   .reset-button {
-    margin-top: 20px;
     padding: 12px;
   }
 
   .progress {
-    margin-top: 16px;
     font-size: 1.1em;
+    margin-bottom: 8px;
   }
 }
 </style>
