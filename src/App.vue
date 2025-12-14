@@ -109,6 +109,9 @@ const handleTouchMove = (e: TouchEvent) => {
   
   // 横スワイプの場合のみ、スライド処理を実行
   if (swipeDirection.value === 'horizontal') {
+    // 横スワイプの場合は縦スクロールを防止
+    e.preventDefault()
+    
     const currentIndex = views.indexOf(activeView.value)
     
     // 端の画面では逆方向のスワイプを制限
