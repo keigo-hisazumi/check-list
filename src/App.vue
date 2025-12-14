@@ -108,10 +108,10 @@ const handleTouchEnd = () => {
         }"
       >
         <div class="view-wrapper">
-          <MorningChecklist key="morning" />
+          <MorningChecklist key="morning" :is-active="activeView === 'morning'" />
         </div>
         <div class="view-wrapper">
-          <BagChecklist key="bag" />
+          <BagChecklist key="bag" :is-active="activeView === 'bag'" />
         </div>
       </div>
     </div>

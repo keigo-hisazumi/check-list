@@ -1,6 +1,15 @@
 <script setup lang="ts">
 import { ref, computed, watch, onMounted } from 'vue'
 
+// Props定義
+interface Props {
+  isActive?: boolean
+}
+
+const props = withDefaults(defineProps<Props>(), {
+  isActive: false
+})
+
 // チェックリスト項目の型定義
 interface ChecklistItem {
   id: string
@@ -95,7 +104,7 @@ const totalCount = checklistItems.length
         </label>
       </li>
     </ul>
-    <div class="bottom-bar">
+    <div class="bottom-bar" v-show="props.isActive">
       <div class="progress">
         {{ completedCount }} / {{ totalCount }} 完了
       </div>
