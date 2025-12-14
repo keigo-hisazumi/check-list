@@ -10,6 +10,13 @@ const props = withDefaults(defineProps<Props>(), {
   isActive: false
 })
 
+// Emits定義
+interface Emits {
+  (e: 'update:stats', stats: { completedCount: number; totalCount: number }): void
+}
+
+const emit = defineEmits<Emits>()
+
 // チェックリスト項目の型定義
 interface ChecklistItem {
   id: string
@@ -82,6 +89,18 @@ const completedCount = computed(() =>
   Object.values(checkedItems.value).filter(Boolean).length
 )
 const totalCount = checklistItems.length
+
+// 統計情報が変更されたときに親コンポーネントに通知
+watch([completedCount, () => props.isActive], () => {
+  if (props.isActive) {
+    emit('update:stats', { completedCount: completedCount.value, totalCount })
+  }
+}, { immediate: true })
+
+// リセット機能を外部に公開
+defineExpose({
+  handleReset
+})
 </script>
 
 <template>
@@ -104,14 +123,6 @@ const totalCount = checklistItems.length
         </label>
       </li>
     </ul>
-    <div class="bottom-bar" v-show="props.isActive">
-      <div class="progress">
-        {{ completedCount }} / {{ totalCount }} 完了
-      </div>
-      <button class="reset-button" @click="handleReset">
-        すべてリセット
-      </button>
-    </div>
   </div>
 </template>
 
@@ -121,7 +132,6 @@ const totalCount = checklistItems.length
   border-radius: 20px;
   box-shadow: 0 20px 60px rgba(0, 0, 0, 0.3);
   padding: 40px;
-  padding-bottom: 140px; /* 下部バーの高さ分の余白 */
   max-width: 600px;
   width: 100%;
   margin-top: calc(80px + env(safe-area-inset-top)); /* ナビゲーションバーとの重なりを防ぐ */
@@ -174,47 +184,11 @@ const totalCount = checklistItems.length
   user-select: none;
 }
 
-.bottom-bar {
-  position: fixed;
-  bottom: 0;
-  left: 0;
-  right: 0;
-  background: white;
-  box-shadow: 0 -4px 20px rgba(0, 0, 0, 0.15);
-  padding: 15px 20px calc(15px + env(safe-area-inset-bottom));
-  z-index: 999;
-}
-
-.progress {
-  text-align: center;
-  font-size: 1.2em;
-  color: #667eea;
-  font-weight: bold;
-  margin-bottom: 10px;
-}
-
-.reset-button {
-  width: 100%;
-  padding: 15px;
-  background: #667eea;
-  color: white;
-  border: none;
-  border-radius: 10px;
-  font-size: 1.1em;
-  cursor: pointer;
-  transition: background 0.3s ease;
-}
-
-.reset-button:hover {
-  background: #5568d3;
-}
-
 @media (max-width: 600px) {
   .container {
     border-radius: 0;
     box-shadow: none;
     padding: 16px;
-    padding-bottom: 140px;
     min-height: 100vh;
     margin-top: calc(60px + env(safe-area-inset-top)); /* ナビゲーションバーの高さに合わせて調整 */
   }
@@ -226,19 +200,6 @@ const totalCount = checklistItems.length
 
   .checklist-item label {
     font-size: 1em;
-  }
-
-  .bottom-bar {
-    padding: 12px 16px calc(12px + env(safe-area-inset-bottom));
-  }
-
-  .reset-button {
-    padding: 12px;
-  }
-
-  .progress {
-    font-size: 1.1em;
-    margin-bottom: 8px;
   }
 }
 </style>
