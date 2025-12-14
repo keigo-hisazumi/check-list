@@ -219,22 +219,29 @@ const handleTouchEnd = () => {
 
 <style scoped>
 .app {
-  min-height: 100vh;
+  height: 100vh;
   display: flex;
   flex-direction: column;
   overflow-x: hidden;
   touch-action: pan-y; /* 垂直スクロールのみを許可 */
+  position: relative;
 }
 
 .view-container {
-  flex: 1;
+  position: absolute;
+  /* ナビゲーションバーの実際の高さ: padding-top(8px) + content + padding-bottom(8px) */
+  /* 計算: 8px + (24px icon + 4px gap + 12px label + 8px*2 padding) + 8px ≈ 61px */
+  /* しかし、safe-area-inset-topを考慮して、より確実な値を使用 */
+  top: calc(61px + env(safe-area-inset-top)); /* ナビゲーションバーの直下から開始 */
+  bottom: 0;
+  left: 0;
+  right: 0;
   display: flex;
   justify-content: flex-start;
   align-items: stretch;
-  width: 100%;
-  position: relative;
-  overflow: hidden;
-  padding-top: calc(80px + env(safe-area-inset-top)); /* ナビゲーションバー分の上部余白 */
+  overflow-x: hidden; /* 横スクロールは無効 */
+  overflow-y: auto; /* 縦スクロールを有効化 */
+  padding-top: 16px; /* コンテンツとナビゲーションバーの間に余白 */
   padding-bottom: 100px; /* bottom-barの高さ分の余白を確保 */
 }
 
@@ -249,14 +256,16 @@ const handleTouchEnd = () => {
   width: 100%;
   display: flex;
   justify-content: center;
-  align-items: stretch;
+  align-items: flex-start;
   padding: 20px;
   box-sizing: border-box;
+  min-height: 100%; /* 最小高さを100%に設定 */
 }
 
 @media (max-width: 600px) {
   .view-container {
-    padding-top: calc(60px + env(safe-area-inset-top)); /* モバイルではナビゲーションバーが小さいため調整 */
+    /* 実測値に基づく調整 */
+    top: calc(61px + env(safe-area-inset-top)); /* ナビゲーションバーの実際の高さに合わせる */
   }
 
   .view-wrapper {
