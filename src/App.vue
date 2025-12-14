@@ -72,6 +72,21 @@ const handleTouchStart = (e: TouchEvent) => {
   }
 }
 
+// スワイプ方向を判定する関数
+const determineSwipeDirection = (diffX: number, diffY: number, threshold: number): 'horizontal' | 'vertical' | null => {
+  const absDiffX = Math.abs(diffX)
+  const absDiffY = Math.abs(diffY)
+  
+  // 十分な移動量がある場合にのみ方向を判定
+  const totalMovement = Math.hypot(absDiffX, absDiffY)
+  if (totalMovement > threshold) {
+    // 横方向の移動が縦方向より大きい場合は横スワイプ
+    return absDiffX > absDiffY ? 'horizontal' : 'vertical'
+  }
+  
+  return null
+}
+
 // タッチ移動イベント - リアルタイムでスライド
 const handleTouchMove = (e: TouchEvent) => {
   if (!isSwiping.value || e.touches.length === 0) return
@@ -84,19 +99,7 @@ const handleTouchMove = (e: TouchEvent) => {
   
   // スワイプ方向がまだ判定されていない場合、判定する
   if (swipeDirection.value === null) {
-    const absDiffX = Math.abs(diffX)
-    const absDiffY = Math.abs(diffY)
-    
-    // 十分な移動量がある場合にのみ方向を判定
-    const totalMovement = Math.sqrt(absDiffX * absDiffX + absDiffY * absDiffY)
-    if (totalMovement > directionThreshold) {
-      // 横方向の移動が縦方向より大きい場合は横スワイプ
-      if (absDiffX > absDiffY) {
-        swipeDirection.value = 'horizontal'
-      } else {
-        swipeDirection.value = 'vertical'
-      }
-    }
+    swipeDirection.value = determineSwipeDirection(diffX, diffY, directionThreshold)
   }
   
   // 縦スクロールの場合は、スワイプ処理をスキップ
