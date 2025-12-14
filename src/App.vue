@@ -234,7 +234,7 @@ const handleTouchEnd = () => {
   width: 100%;
   position: relative;
   overflow: hidden;
-  padding-bottom: 120px; /* bottom-barの高さ分の余白を確保 */
+  padding-bottom: 100px; /* bottom-barの高さ分の余白を確保 */
 }
 
 .view-slider {
