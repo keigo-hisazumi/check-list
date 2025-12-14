@@ -7,6 +7,30 @@ import BagChecklist from './components/BagChecklist.vue'
 // アクティブなビューの管理
 const activeView = ref<string>('morning')
 
+// コンポーネントのrefを管理
+const morningChecklistRef = ref<InstanceType<typeof MorningChecklist> | null>(null)
+const bagChecklistRef = ref<InstanceType<typeof BagChecklist> | null>(null)
+
+// 統計情報の管理
+const stats = ref<{ completedCount: number; totalCount: number }>({
+  completedCount: 0,
+  totalCount: 0
+})
+
+// 統計情報の更新ハンドラー
+const handleStatsUpdate = (newStats: { completedCount: number; totalCount: number }) => {
+  stats.value = newStats
+}
+
+// リセットボタンのハンドラー
+const handleReset = () => {
+  if (activeView.value === 'morning' && morningChecklistRef.value) {
+    morningChecklistRef.value.handleReset()
+  } else if (activeView.value === 'bag' && bagChecklistRef.value) {
+    bagChecklistRef.value.handleReset()
+  }
+}
+
 // ビューのリスト
 const views = ['morning', 'bag']
 
@@ -108,12 +132,30 @@ const handleTouchEnd = () => {
         }"
       >
         <div class="view-wrapper">
-          <MorningChecklist key="morning" :is-active="activeView === 'morning'" />
+          <MorningChecklist 
+            ref="morningChecklistRef"
+            key="morning" 
+            :is-active="activeView === 'morning'"
+            @update:stats="handleStatsUpdate"
+          />
         </div>
         <div class="view-wrapper">
-          <BagChecklist key="bag" :is-active="activeView === 'bag'" />
+          <BagChecklist 
+            ref="bagChecklistRef"
+            key="bag" 
+            :is-active="activeView === 'bag'"
+            @update:stats="handleStatsUpdate"
+          />
         </div>
       </div>
+    </div>
+    <div class="bottom-bar">
+      <div class="progress">
+        {{ stats.completedCount }} / {{ stats.totalCount }} 完了
+      </div>
+      <button class="reset-button" @click="handleReset">
+        すべてリセット
+      </button>
     </div>
   </div>
 </template>
@@ -135,6 +177,7 @@ const handleTouchEnd = () => {
   width: 100%;
   position: relative;
   overflow: hidden;
+  padding-bottom: 120px; /* bottom-barの高さ分の余白を確保 */
 }
 
 .view-slider {
@@ -156,6 +199,56 @@ const handleTouchEnd = () => {
 @media (max-width: 600px) {
   .view-wrapper {
     padding: 0;
+  }
+}
+
+.bottom-bar {
+  position: fixed;
+  bottom: 0;
+  left: 0;
+  right: 0;
+  background: white;
+  box-shadow: 0 -4px 20px rgba(0, 0, 0, 0.15);
+  padding: 15px 20px calc(15px + env(safe-area-inset-bottom));
+  z-index: 1001; /* ナビゲーションバーよりも上に配置 */
+}
+
+.progress {
+  text-align: center;
+  font-size: 1.2em;
+  color: #667eea;
+  font-weight: bold;
+  margin-bottom: 10px;
+}
+
+.reset-button {
+  width: 100%;
+  padding: 15px;
+  background: #667eea;
+  color: white;
+  border: none;
+  border-radius: 10px;
+  font-size: 1.1em;
+  cursor: pointer;
+  transition: background 0.3s ease;
+}
+
+.reset-button:hover {
+  background: #5568d3;
+}
+
+@media (max-width: 600px) {
+  .bottom-bar {
+    padding: 12px 16px calc(12px + env(safe-area-inset-bottom));
+  }
+
+  .reset-button {
+    padding: 12px;
+  }
+
+  .progress {
+    font-size: 1.1em;
+    margin-bottom: 8px;
   }
 }
 </style>
