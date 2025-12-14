@@ -47,11 +47,15 @@ const handleNavChange = (viewId: string) => {
 
 // スワイプ機能の実装
 const touchStartX = ref<number>(0)
+const touchStartY = ref<number>(0)
 const touchCurrentX = ref<number>(0)
+const touchCurrentY = ref<number>(0)
 const translateX = ref<number>(0)
 const isTransitioning = ref<boolean>(false)
 const isSwiping = ref<boolean>(false)
+const swipeDirection = ref<'horizontal' | 'vertical' | null>(null)
 const swipeThreshold = 100 // 画面遷移を確定するしきい値（ピクセル）
+const directionThreshold = 10 // スワイプ方向を判定するしきい値（ピクセル）
 const edgeResistance = 0.3 // 端での抵抗感の係数
 const transitionDuration = 300 // トランジション時間（ミリ秒）
 
@@ -59,8 +63,11 @@ const transitionDuration = 300 // トランジション時間（ミリ秒）
 const handleTouchStart = (e: TouchEvent) => {
   if (e.touches.length > 0) {
     touchStartX.value = e.touches[0].clientX
+    touchStartY.value = e.touches[0].clientY
     touchCurrentX.value = e.touches[0].clientX
+    touchCurrentY.value = e.touches[0].clientY
     isSwiping.value = true
+    swipeDirection.value = null
     isTransitioning.value = false
   }
 }
@@ -70,16 +77,44 @@ const handleTouchMove = (e: TouchEvent) => {
   if (!isSwiping.value || e.touches.length === 0) return
   
   touchCurrentX.value = e.touches[0].clientX
-  const diff = touchCurrentX.value - touchStartX.value
-  const currentIndex = views.indexOf(activeView.value)
+  touchCurrentY.value = e.touches[0].clientY
   
-  // 端の画面では逆方向のスワイプを制限
-  if ((currentIndex === 0 && diff > 0) || 
-      (currentIndex === views.length - 1 && diff < 0)) {
-    // 端での抵抗感を表現（スワイプ量を減衰）
-    translateX.value = diff * edgeResistance
-  } else {
-    translateX.value = diff
+  const diffX = touchCurrentX.value - touchStartX.value
+  const diffY = touchCurrentY.value - touchStartY.value
+  
+  // スワイプ方向がまだ判定されていない場合、判定する
+  if (swipeDirection.value === null) {
+    const absDiffX = Math.abs(diffX)
+    const absDiffY = Math.abs(diffY)
+    
+    // しきい値を超えた場合にのみ方向を判定
+    if (absDiffX > directionThreshold || absDiffY > directionThreshold) {
+      // 横方向の移動が縦方向より大きい場合は横スワイプ
+      if (absDiffX > absDiffY) {
+        swipeDirection.value = 'horizontal'
+      } else {
+        swipeDirection.value = 'vertical'
+      }
+    }
+  }
+  
+  // 縦スクロールの場合は、スワイプ処理をスキップ
+  if (swipeDirection.value === 'vertical') {
+    return
+  }
+  
+  // 横スワイプの場合のみ、スライド処理を実行
+  if (swipeDirection.value === 'horizontal') {
+    const currentIndex = views.indexOf(activeView.value)
+    
+    // 端の画面では逆方向のスワイプを制限
+    if ((currentIndex === 0 && diffX > 0) || 
+        (currentIndex === views.length - 1 && diffX < 0)) {
+      // 端での抵抗感を表現（スワイプ量を減衰）
+      translateX.value = diffX * edgeResistance
+    } else {
+      translateX.value = diffX
+    }
   }
 }
 
@@ -87,23 +122,34 @@ const handleTouchMove = (e: TouchEvent) => {
 const handleTouchEnd = () => {
   if (!isSwiping.value) return
   
+  // 縦スクロールの場合は、スワイプ処理をスキップ
+  if (swipeDirection.value === 'vertical') {
+    isSwiping.value = false
+    swipeDirection.value = null
+    return
+  }
+  
   isSwiping.value = false
   const swipeDistance = touchCurrentX.value - touchStartX.value
   const currentIndex = views.indexOf(activeView.value)
   
   isTransitioning.value = true
   
-  // 右スワイプ（前の画面へ）
-  if (swipeDistance > swipeThreshold && currentIndex > 0) {
-    activeView.value = views[currentIndex - 1]
-  }
-  // 左スワイプ（次の画面へ）
-  else if (swipeDistance < -swipeThreshold && currentIndex < views.length - 1) {
-    activeView.value = views[currentIndex + 1]
+  // 横スワイプの場合のみ、画面遷移を実行
+  if (swipeDirection.value === 'horizontal') {
+    // 右スワイプ（前の画面へ）
+    if (swipeDistance > swipeThreshold && currentIndex > 0) {
+      activeView.value = views[currentIndex - 1]
+    }
+    // 左スワイプ（次の画面へ）
+    else if (swipeDistance < -swipeThreshold && currentIndex < views.length - 1) {
+      activeView.value = views[currentIndex + 1]
+    }
   }
   
   // スライドオフセットをリセット
   translateX.value = 0
+  swipeDirection.value = null
   
   // トランジション完了後にフラグをリセット
   setTimeout(() => {
