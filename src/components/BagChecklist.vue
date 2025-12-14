@@ -135,7 +135,8 @@ defineExpose({
   padding: 40px;
   max-width: 600px;
   width: 100%;
-  margin-top: calc(80px + env(safe-area-inset-top)); /* ナビゲーションバーとの重なりを防ぐ */
+  display: flex;
+  flex-direction: column;
 }
 
 .checklist {
@@ -190,7 +191,7 @@ defineExpose({
     border-radius: 0;
     box-shadow: none;
     padding: 16px;
-    margin-top: calc(60px + env(safe-area-inset-top)); /* ナビゲーションバーの高さに合わせて調整 */
+    min-height: 100%;
   }
 
   .checklist-item {
