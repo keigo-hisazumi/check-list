@@ -87,8 +87,9 @@ const handleTouchMove = (e: TouchEvent) => {
     const absDiffX = Math.abs(diffX)
     const absDiffY = Math.abs(diffY)
     
-    // しきい値を超えた場合にのみ方向を判定
-    if (absDiffX > directionThreshold || absDiffY > directionThreshold) {
+    // 十分な移動量がある場合にのみ方向を判定
+    const totalMovement = Math.sqrt(absDiffX * absDiffX + absDiffY * absDiffY)
+    if (totalMovement > directionThreshold) {
       // 横方向の移動が縦方向より大きい場合は横スワイプ
       if (absDiffX > absDiffY) {
         swipeDirection.value = 'horizontal'
@@ -118,18 +119,23 @@ const handleTouchMove = (e: TouchEvent) => {
   }
 }
 
+// スワイプ状態をリセットするヘルパー関数
+const resetSwipeState = () => {
+  isSwiping.value = false
+  swipeDirection.value = null
+  translateX.value = 0
+}
+
 // タッチ終了イベント
 const handleTouchEnd = () => {
   if (!isSwiping.value) return
   
   // 縦スクロールの場合は、スワイプ処理をスキップ
   if (swipeDirection.value === 'vertical') {
-    isSwiping.value = false
-    swipeDirection.value = null
+    resetSwipeState()
     return
   }
   
-  isSwiping.value = false
   const swipeDistance = touchCurrentX.value - touchStartX.value
   const currentIndex = views.indexOf(activeView.value)
   
@@ -147,9 +153,8 @@ const handleTouchEnd = () => {
     }
   }
   
-  // スライドオフセットをリセット
-  translateX.value = 0
-  swipeDirection.value = null
+  // スワイプ状態をリセット
+  resetSwipeState()
   
   // トランジション完了後にフラグをリセット
   setTimeout(() => {
