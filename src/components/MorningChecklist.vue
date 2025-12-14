@@ -192,7 +192,6 @@ defineExpose({
     border-radius: 0;
     box-shadow: none;
     padding: 16px;
-    min-height: 100vh;
     margin-top: calc(60px + env(safe-area-inset-top)); /* ナビゲーションバーの高さに合わせて調整 */
   }
 
