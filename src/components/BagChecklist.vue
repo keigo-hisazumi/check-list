@@ -88,8 +88,11 @@ const completedCount = computed(() =>
 )
 const totalCount = checklistItems.length
 
+// isActiveのcomputed版を作成
+const isActiveComputed = computed(() => props.isActive)
+
 // 統計情報が変更されたときに親コンポーネントに通知
-watch([completedCount, () => props.isActive], () => {
+watch([completedCount, isActiveComputed], () => {
   if (props.isActive) {
     emit('update:stats', { completedCount: completedCount.value, totalCount })
   }
