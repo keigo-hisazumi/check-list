@@ -230,10 +230,11 @@ const handleTouchEnd = () => {
   flex: 1;
   display: flex;
   justify-content: flex-start;
-  align-items: flex-start;
+  align-items: stretch;
   width: 100%;
   position: relative;
   overflow: hidden;
+  padding-top: calc(80px + env(safe-area-inset-top)); /* ナビゲーションバー分の上部余白 */
   padding-bottom: 100px; /* bottom-barの高さ分の余白を確保 */
 }
 
@@ -248,12 +249,16 @@ const handleTouchEnd = () => {
   width: 100%;
   display: flex;
   justify-content: center;
-  align-items: flex-start;
+  align-items: stretch;
   padding: 20px;
   box-sizing: border-box;
 }
 
 @media (max-width: 600px) {
+  .view-container {
+    padding-top: calc(60px + env(safe-area-inset-top)); /* モバイルではナビゲーションバーが小さいため調整 */
+  }
+
   .view-wrapper {
     padding: 0;
   }

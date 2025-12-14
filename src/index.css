@@ -21,6 +21,12 @@ body {
   min-height: 100vh;
 }
 
+@media (max-width: 600px) {
+  body {
+    background: white;
+  }
+}
+
 #app {
   width: 100%;
   min-height: 100vh;
