@@ -50,8 +50,8 @@ test.describe('チェックリストのリセット機能', () => {
     // カバンの中タブをクリック（ナビゲーションバーのボタンをクリック）
     await page.locator('button:has-text("カバンの中")').click();
     
-    // ビューの切り替えアニメーションを待つ
-    await page.waitForTimeout(500);
+    // カバンの中の進捗表示が表示されるまで待つ
+    await page.locator('.progress').filter({ hasText: '/ 8 完了' }).waitFor({ state: 'visible' });
     
     // 初期状態で完了数が 0 / 8 であることを確認（visible な要素のみを確認）
     await expect(page.locator('.progress').filter({ hasText: '/ 8 完了' })).toBeVisible();
@@ -64,7 +64,8 @@ test.describe('チェックリストのリセット機能', () => {
     // 完了数が 2 / 8 になることを確認
     await expect(page.locator('.progress').filter({ hasText: '/ 8 完了' })).toContainText('2 / 8 完了');
     
-    // リセットボタンをクリック（JavaScriptでクリック）
+    // リセットボタンをクリック
+    // 注: position:fixedで重なっているため、JavaScriptで実際に表示されているボタンをクリック
     await page.evaluate(() => {
       const buttons = Array.from(document.querySelectorAll('button.reset-button'));
       const visibleButton = buttons.find(btn => {
