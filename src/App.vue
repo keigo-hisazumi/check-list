@@ -219,7 +219,7 @@ const handleTouchEnd = () => {
 
 <style scoped>
 .app {
-  min-height: 100vh;
+  height: 100vh;
   display: flex;
   flex-direction: column;
   overflow-x: hidden;
@@ -233,7 +233,8 @@ const handleTouchEnd = () => {
   align-items: stretch;
   width: 100%;
   position: relative;
-  overflow: hidden;
+  overflow-x: hidden; /* 横スクロールは無効 */
+  overflow-y: auto; /* 縦スクロールを有効化 */
   padding-top: calc(80px + env(safe-area-inset-top)); /* ナビゲーションバー分の上部余白 */
   padding-bottom: 100px; /* bottom-barの高さ分の余白を確保 */
 }
