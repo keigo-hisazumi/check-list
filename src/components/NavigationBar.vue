@@ -59,6 +59,9 @@ const handleNavClick = (id: string) => {
   background: white;
   box-shadow: 0 4px 20px rgba(0, 0, 0, 0.15);
   z-index: 1000;
+  /* スクロール時にコンテンツが透けないよう、背景を完全に不透明に */
+  -webkit-backdrop-filter: blur(10px);
+  backdrop-filter: blur(10px);
 }
 
 .nav-container {
