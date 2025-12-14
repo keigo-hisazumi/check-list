@@ -249,7 +249,6 @@ const handleTouchEnd = () => {
   display: flex;
   width: 100%;
   will-change: transform;
-  padding-bottom: 100px; /* bottom-barの高さ分の余白を確保 */
 }
 
 .view-wrapper {
