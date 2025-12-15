@@ -3,13 +3,12 @@
 interface NavItem {
   id: string
   label: string
-  icon: string
 }
 
 // ナビゲーション項目の定義
 const navItems: NavItem[] = [
-  { id: 'morning', label: '朝やること', icon: '🌅' },
-  { id: 'bag', label: 'カバンの中', icon: '🎒' },
+  { id: 'morning', label: '朝やること' },
+  { id: 'bag', label: 'カバンの中' },
 ]
 
 // Props定義
@@ -43,7 +42,6 @@ const handleNavClick = (id: string) => {
         :class="['nav-item', { active: props.activeItem === item.id }]"
         @click="handleNavClick(item.id)"
       >
-        <span class="nav-icon">{{ item.icon }}</span>
         <span class="nav-label">{{ item.label }}</span>
       </button>
     </div>
@@ -75,8 +73,7 @@ const handleNavClick = (id: string) => {
   display: flex;
   flex-direction: column;
   align-items: center;
-  gap: 4px;
-  padding: 8px 16px;
+  padding: 12px 16px;
   background: none;
   border: none;
   cursor: pointer;
@@ -96,13 +93,8 @@ const handleNavClick = (id: string) => {
   background: #f0f3ff;
 }
 
-.nav-icon {
-  font-size: 24px;
-  line-height: 1;
-}
-
 .nav-label {
-  font-size: 12px;
+  font-size: 14px;
   font-weight: 500;
   line-height: 1;
 }
@@ -113,15 +105,11 @@ const handleNavClick = (id: string) => {
   }
 
   .nav-item {
-    padding: 6px 12px;
-  }
-
-  .nav-icon {
-    font-size: 22px;
+    padding: 10px 12px;
   }
 
   .nav-label {
-    font-size: 11px;
+    font-size: 13px;
   }
 }
 </style>
