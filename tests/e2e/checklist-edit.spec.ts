@@ -165,4 +165,29 @@ test.describe('チェックリストの編集機能', () => {
     // 元のテキストが残っていることを確認（空白は保存されない）
     await expect(page.locator('text=紅茶、コーヒー')).toBeVisible();
   });
+
+  test('リセット機能でカスタムラベルもクリアされる', async ({ page }) => {
+    await page.goto('/');
+    
+    // 最初の項目を編集
+    const firstEditButton = page.locator('button.edit-button').first();
+    await firstEditButton.click();
+    
+    const editInput = page.locator('input.edit-input');
+    await editInput.fill('カスタムラベルテスト');
+    await page.locator('button.save-button').click();
+    
+    // 編集されたテキストが表示されることを確認
+    await expect(page.locator('text=カスタムラベルテスト')).toBeVisible();
+    
+    // リセットボタンをクリック
+    await page.locator('button.reset-button').filter({ hasText: 'すべてリセット' }).first().click();
+    
+    // ページをリロード
+    await page.reload();
+    
+    // リロード後、元のラベルに戻っていることを確認
+    await expect(page.locator('text=紅茶、コーヒー')).toBeVisible();
+    await expect(page.locator('text=カスタムラベルテスト')).not.toBeVisible();
+  });
 });
