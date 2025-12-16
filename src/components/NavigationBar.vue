@@ -60,6 +60,8 @@ const handleNavClick = (id: string) => {
   /* 視覚的な分離を強化するためのぼかし効果 */
   -webkit-backdrop-filter: blur(10px);
   backdrop-filter: blur(10px);
+  /* ナビゲーションバーの高さをCSS変数として定義 */
+  --nav-bar-height: calc(8px + env(safe-area-inset-top) + 12px + 14px + 12px + 8px);
 }
 
 .nav-container {
@@ -100,6 +102,11 @@ const handleNavClick = (id: string) => {
 }
 
 @media (max-width: 600px) {
+  .navigation-bar {
+    /* スマートフォン用のナビゲーションバーの高さ */
+    --nav-bar-height: calc(6px + env(safe-area-inset-top) + 10px + 13px + 10px + 6px);
+  }
+
   .nav-container {
     padding: calc(6px + env(safe-area-inset-top)) 0 6px;
   }
