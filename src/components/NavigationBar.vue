@@ -86,10 +86,6 @@ const handleNavClick = (id: string) => {
   max-width: 120px;
 }
 
-.nav-item:hover {
-  background: #f8f9fa;
-}
-
 .nav-item.active {
   color: #667eea;
   background: #f0f3ff;
