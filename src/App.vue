@@ -225,11 +225,13 @@ const handleTouchEnd = () => {
   overflow-x: hidden;
   touch-action: pan-y; /* 垂直スクロールのみを許可 */
   position: relative;
+  /* ナビゲーションバーの高さを定義 */
+  --nav-bar-height: calc(8px + env(safe-area-inset-top) + 12px + 14px + 12px + 8px);
 }
 
 .view-container {
   position: absolute;
-  top: calc(8px + env(safe-area-inset-top) + 12px + 14px + 12px + 8px); /* ナビゲーションバーの直下から開始 */
+  top: var(--nav-bar-height); /* ナビゲーションバーの直下から開始 */
   bottom: 100px;
   left: 0;
   right: 0;
@@ -258,9 +260,9 @@ const handleTouchEnd = () => {
 }
 
 @media (max-width: 600px) {
-  .view-container {
-    /* スマートフォン用のナビゲーションバーの高さに合わせる */
-    top: calc(6px + env(safe-area-inset-top) + 10px + 13px + 10px + 6px);
+  .app {
+    /* スマートフォン用のナビゲーションバーの高さ */
+    --nav-bar-height: calc(6px + env(safe-area-inset-top) + 10px + 13px + 10px + 6px);
   }
 
   .view-wrapper {
