@@ -165,20 +165,6 @@ defineExpose({
         :key="item.id"
         :class="['checklist-item', { checked: checkedItems[item.id], editing: editingItemId === item.id }]"
       >
-        <input
-          v-if="editingItemId !== item.id"
-          type="checkbox"
-          :id="item.id"
-          :checked="checkedItems[item.id]"
-          @click.stop="handleCheckChange(item.id)"
-        />
-        <label 
-          v-if="editingItemId !== item.id"
-          :for="item.id" 
-          @click.prevent="handleCheckChange(item.id)"
-        >
-          {{ getDisplayLabel(item) }}
-        </label>
         <button
           v-if="editingItemId !== item.id"
           class="edit-button"
@@ -187,6 +173,20 @@ defineExpose({
         >
           ✏️
         </button>
+        <label 
+          v-if="editingItemId !== item.id"
+          :for="item.id" 
+          @click.prevent="handleCheckChange(item.id)"
+        >
+          {{ getDisplayLabel(item) }}
+        </label>
+        <input
+          v-if="editingItemId !== item.id"
+          type="checkbox"
+          :id="item.id"
+          :checked="checkedItems[item.id]"
+          @click.stop="handleCheckChange(item.id)"
+        />
         
         <div v-if="editingItemId === item.id" class="edit-mode">
           <input
@@ -263,7 +263,7 @@ defineExpose({
 .checklist-item input[type="checkbox"] {
   width: 24px;
   height: 24px;
-  margin-right: 15px;
+  margin-left: 15px;
   cursor: pointer;
   accent-color: #667eea;
 }
@@ -287,6 +287,7 @@ defineExpose({
   cursor: pointer;
   font-size: 1.2em;
   padding: 5px;
+  margin-right: 15px;
   opacity: 0.6;
   transition: opacity 0.3s ease;
 }
