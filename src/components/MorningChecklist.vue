@@ -158,10 +158,6 @@ defineExpose({
   cursor: pointer;
 }
 
-.checklist-item:hover {
-  background: #e9ecef;
-}
-
 .checklist-item.checked {
   background: #d4edda;
   opacity: 0.7;

@@ -301,10 +301,6 @@ const handleTouchEnd = () => {
   transition: background 0.3s ease;
 }
 
-.reset-button:hover {
-  background: #5568d3;
-}
-
 @media (max-width: 600px) {
   .bottom-bar {
     padding: 12px 16px calc(12px + env(safe-area-inset-bottom));
