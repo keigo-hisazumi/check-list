@@ -76,46 +76,46 @@ const handleTouchStart = (e: TouchEvent) => {
 const determineSwipeDirection = (diffX: number, diffY: number, threshold: number): 'horizontal' | 'vertical' | null => {
   const absDiffX = Math.abs(diffX)
   const absDiffY = Math.abs(diffY)
-  
+
   // 十分な移動量がある場合にのみ方向を判定
   const totalMovement = Math.hypot(absDiffX, absDiffY)
   if (totalMovement > threshold) {
     // 横方向の移動が縦方向より大きい場合は横スワイプ
     return absDiffX > absDiffY ? 'horizontal' : 'vertical'
   }
-  
+
   return null
 }
 
 // タッチ移動イベント - リアルタイムでスライド
 const handleTouchMove = (e: TouchEvent) => {
   if (!isSwiping.value || e.touches.length === 0) return
-  
+
   touchCurrentX.value = e.touches[0].clientX
   touchCurrentY.value = e.touches[0].clientY
-  
+
   const diffX = touchCurrentX.value - touchStartX.value
   const diffY = touchCurrentY.value - touchStartY.value
-  
+
   // スワイプ方向がまだ判定されていない場合、判定する
   if (swipeDirection.value === null) {
     swipeDirection.value = determineSwipeDirection(diffX, diffY, directionThreshold)
   }
-  
+
   // 縦スクロールの場合は、スワイプ処理をスキップ
   if (swipeDirection.value === 'vertical') {
     return
   }
-  
+
   // 横スワイプの場合のみ、スライド処理を実行
   if (swipeDirection.value === 'horizontal') {
     // 横スワイプの場合は縦スクロールを防止
     e.preventDefault()
-    
+
     const currentIndex = views.indexOf(activeView.value)
-    
+
     // 端の画面では逆方向のスワイプを制限
-    if ((currentIndex === 0 && diffX > 0) || 
+    if ((currentIndex === 0 && diffX > 0) ||
         (currentIndex === views.length - 1 && diffX < 0)) {
       // 端での抵抗感を表現（スワイプ量を減衰）
       translateX.value = diffX * edgeResistance
@@ -135,18 +135,18 @@ const resetSwipeState = () => {
 // タッチ終了イベント
 const handleTouchEnd = () => {
   if (!isSwiping.value) return
-  
+
   // 縦スクロールの場合は、スワイプ処理をスキップ
   if (swipeDirection.value === 'vertical') {
     resetSwipeState()
     return
   }
-  
+
   const swipeDistance = touchCurrentX.value - touchStartX.value
   const currentIndex = views.indexOf(activeView.value)
-  
+
   isTransitioning.value = true
-  
+
   // 横スワイプの場合のみ、画面遷移を実行
   if (swipeDirection.value === 'horizontal') {
     // 右スワイプ（前の画面へ）
@@ -158,10 +158,10 @@ const handleTouchEnd = () => {
       activeView.value = views[currentIndex + 1]
     }
   }
-  
+
   // スワイプ状態をリセット
   resetSwipeState()
-  
+
   // トランジション完了後にフラグをリセット
   setTimeout(() => {
     isTransitioning.value = false
@@ -170,18 +170,18 @@ const handleTouchEnd = () => {
 </script>
 
 <template>
-  <div 
+  <div
     class="app"
     @touchstart="handleTouchStart"
     @touchmove="handleTouchMove"
     @touchend="handleTouchEnd"
   >
-    <NavigationBar 
-      :active-item="activeView" 
-      @nav-change="handleNavChange" 
+    <NavigationBar
+      :active-item="activeView"
+      @nav-change="handleNavChange"
     />
     <div class="view-container">
-      <div 
+      <div
         class="view-slider"
         :style="{
           transform: `translateX(calc(-${currentIndex * 100}% + ${translateX}px))`,
@@ -189,17 +189,17 @@ const handleTouchEnd = () => {
         }"
       >
         <div class="view-wrapper">
-          <MorningChecklist 
+          <MorningChecklist
             ref="morningChecklistRef"
-            key="morning" 
+            key="morning"
             :is-active="activeView === 'morning'"
             @update:stats="handleStatsUpdate"
           />
         </div>
         <div class="view-wrapper">
-          <BagChecklist 
+          <BagChecklist
             ref="bagChecklistRef"
-            key="bag" 
+            key="bag"
             :is-active="activeView === 'bag'"
             @update:stats="handleStatsUpdate"
           />
@@ -229,11 +229,8 @@ const handleTouchEnd = () => {
 
 .view-container {
   position: absolute;
-  /* ナビゲーションバーの実際の高さ: padding-top(8px) + content + padding-bottom(8px) */
-  /* 計算: 8px + (24px icon + 4px gap + 12px label + 8px*2 padding) + 8px ≈ 61px */
-  /* しかし、safe-area-inset-topを考慮して、より確実な値を使用 */
-  top: calc(61px + env(safe-area-inset-top)); /* ナビゲーションバーの直下から開始 */
-  bottom: 0;
+  top: calc(45px + env(safe-area-inset-top)); /* ナビゲーションバーの直下から開始 */
+  bottom: 100px;
   left: 0;
   right: 0;
   display: flex;
@@ -241,8 +238,6 @@ const handleTouchEnd = () => {
   align-items: stretch;
   overflow-x: hidden; /* 横スクロールは無効 */
   overflow-y: auto; /* 縦スクロールを有効化 */
-  padding-top: 16px; /* コンテンツとナビゲーションバーの間に余白 */
-  padding-bottom: 100px; /* bottom-barの高さ分の余白を確保 */
 }
 
 .view-slider {
@@ -265,7 +260,7 @@ const handleTouchEnd = () => {
 @media (max-width: 600px) {
   .view-container {
     /* 実測値に基づく調整 */
-    top: calc(61px + env(safe-area-inset-top)); /* ナビゲーションバーの実際の高さに合わせる */
+    top: calc(45px + env(safe-area-inset-top)); /* ナビゲーションバーの実際の高さに合わせる */
   }
 
   .view-wrapper {
