@@ -89,8 +89,8 @@ test.describe('チェックリストの編集機能', () => {
     // カバンの中の進捗表示が表示されるまで待つ
     await page.locator('.progress').filter({ hasText: '/ 8 完了' }).waitFor({ state: 'visible' });
     
-    // bag-maskの編集ボタンをクリック
-    await page.locator('#bag-mask').locator('..').locator('button.edit-button').click();
+    // bag-maskの編集ボタンをクリック（labelのfor属性を使ってリスト項目を特定）
+    await page.locator('label[for="bag-mask"]').locator('..').locator('button.edit-button').click();
     
     // 編集入力フィールドが表示されることを確認
     const editInput = page.locator('input.edit-input');

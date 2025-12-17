@@ -171,7 +171,9 @@ defineExpose({
           @click.stop="startEdit(item.id)"
           title="編集"
         >
-          ✏️
+          <svg xmlns="http://www.w3.org/2000/svg" height="20" viewBox="0 -960 960 960" width="20" fill="currentColor">
+            <path d="M200-200h57l391-391-57-57-391 391v57Zm-80 80v-170l528-527q12-11 26.5-17t30.5-6q16 0 31 6t26 18l55 56q12 11 17.5 26t5.5 30q0 16-5.5 30.5T817-647L290-120H120Zm640-584-56-56 56 56Zm-141 85-28-29 57 57-29-28Z"/>
+          </svg>
         </button>
         <label 
           v-if="editingItemId !== item.id"
@@ -180,13 +182,16 @@ defineExpose({
         >
           {{ getDisplayLabel(item) }}
         </label>
-        <input
+        <button
           v-if="editingItemId !== item.id"
-          type="checkbox"
-          :id="item.id"
-          :checked="checkedItems[item.id]"
+          class="checkbox-button"
           @click.stop="handleCheckChange(item.id)"
-        />
+          :aria-label="checkedItems[item.id] ? 'チェック済み' : '未チェック'"
+        >
+          <svg v-if="checkedItems[item.id]" xmlns="http://www.w3.org/2000/svg" height="24" viewBox="0 -960 960 960" width="24" fill="currentColor">
+            <path d="M382-240 154-468l57-57 171 171 367-367 57 57-424 424Z"/>
+          </svg>
+        </button>
         
         <div v-if="editingItemId === item.id" class="edit-mode">
           <input
@@ -256,12 +261,28 @@ defineExpose({
   color: #6c757d;
 }
 
-.checklist-item input[type="checkbox"] {
+.checkbox-button {
+  background: none;
+  border: none;
+  cursor: pointer;
+  padding: 0;
+  margin-left: 15px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  color: #667eea;
+  transition: transform 0.2s ease;
+  min-width: 24px;
+  min-height: 24px;
+}
+
+.checkbox-button:hover {
+  transform: scale(1.1);
+}
+
+.checkbox-button svg {
   width: 24px;
   height: 24px;
-  margin-left: 15px;
-  cursor: pointer;
-  accent-color: #667eea;
 }
 
 .checklist-item label {
@@ -281,15 +302,23 @@ defineExpose({
   background: none;
   border: none;
   cursor: pointer;
-  font-size: 1.2em;
   padding: 5px;
   margin-right: 15px;
   opacity: 0.6;
   transition: opacity 0.3s ease;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  color: #666;
 }
 
 .edit-button:hover {
   opacity: 1;
+}
+
+.edit-button svg {
+  width: 20px;
+  height: 20px;
 }
 
 .edit-mode {
