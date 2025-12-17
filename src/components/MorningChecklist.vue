@@ -243,8 +243,8 @@ defineExpose({
 .checklist-item {
   display: flex;
   align-items: center;
-  padding: 15px;
-  margin-bottom: 10px;
+  padding: 10px;
+  margin-bottom: 6px;
   background: #f8f9fa;
   border-radius: 10px;
   transition: all 0.3s ease;
@@ -372,8 +372,8 @@ defineExpose({
   }
 
   .checklist-item {
-    padding: 12px;
-    margin-bottom: 8px;
+    padding: 8px;
+    margin-bottom: 6px;
   }
 
   .checklist-item label {
