@@ -187,10 +187,7 @@ defineExpose({
           :aria-label="checkedItems[item.id] ? 'チェック済み' : '未チェック'"
         >
           <svg v-if="checkedItems[item.id]" xmlns="http://www.w3.org/2000/svg" height="24" viewBox="0 -960 960 960" width="24" fill="currentColor">
-            <path d="M200-120q-33 0-56.5-23.5T120-200v-560q0-33 23.5-56.5T200-840h560q33 0 56.5 23.5T840-760v560q0 33-23.5 56.5T760-120H200Zm0-80h560v-560H200v560Zm221-120 283-283-57-56-226 226-114-113-56 57 170 169Zm-21-280Z"/>
-          </svg>
-          <svg v-else xmlns="http://www.w3.org/2000/svg" height="24" viewBox="0 -960 960 960" width="24" fill="currentColor">
-            <path d="M200-120q-33 0-56.5-23.5T120-200v-560q0-33 23.5-56.5T200-840h560q33 0 56.5 23.5T840-760v560q0 33-23.5 56.5T760-120H200Zm0-80h560v-560H200v560Z"/>
+            <path d="M382-240 154-468l57-57 171 171 367-367 57 57-424 424Z"/>
           </svg>
         </button>
         
@@ -273,6 +270,8 @@ defineExpose({
   justify-content: center;
   color: #667eea;
   transition: transform 0.2s ease;
+  min-width: 24px;
+  min-height: 24px;
 }
 
 .checkbox-button:hover {
