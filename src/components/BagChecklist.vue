@@ -38,6 +38,11 @@ const checklistItems: ChecklistItem[] = [
 // チェック状態の管理
 const checkedItems = ref<Record<string, boolean>>({})
 
+// 編集状態の管理
+const editingItemId = ref<string | null>(null)
+const editingText = ref<string>('')
+const customLabels = ref<Record<string, string>>({})
+
 // ローカルストレージからチェック状態を読み込む
 const loadCheckedState = () => {
   const saved: Record<string, boolean> = {}
@@ -48,9 +53,22 @@ const loadCheckedState = () => {
   checkedItems.value = saved
 }
 
+// ローカルストレージからカスタムラベルを読み込む
+const loadCustomLabels = () => {
+  const saved: Record<string, string> = {}
+  checklistItems.forEach(item => {
+    const value = localStorage.getItem(`${item.id}-label`)
+    if (value) {
+      saved[item.id] = value
+    }
+  })
+  customLabels.value = saved
+}
+
 // コンポーネントマウント時に状態を読み込む
 onMounted(() => {
   loadCheckedState()
+  loadCustomLabels()
 })
 
 // チェック状態が変わったらローカルストレージに保存
@@ -72,14 +90,47 @@ const handleCheckChange = (id: string) => {
   }
 }
 
+// 編集モードを開始
+const startEdit = (id: string) => {
+  editingItemId.value = id
+  editingText.value = customLabels.value[id] || checklistItems.find(item => item.id === id)?.label || ''
+}
+
+// 編集をキャンセル
+const cancelEdit = () => {
+  editingItemId.value = null
+  editingText.value = ''
+}
+
+// 編集を保存
+const saveEdit = (id: string) => {
+  const trimmedText = editingText.value.trim()
+  if (trimmedText) {
+    customLabels.value = {
+      ...customLabels.value,
+      [id]: trimmedText
+    }
+    localStorage.setItem(`${id}-label`, trimmedText)
+  }
+  editingItemId.value = null
+  editingText.value = ''
+}
+
+// 表示用のラベルを取得
+const getDisplayLabel = (item: ChecklistItem): string => {
+  return customLabels.value[item.id] || item.label
+}
+
 // リセットボタンのハンドラー
 const handleReset = () => {
   const resetState: Record<string, boolean> = {}
   checklistItems.forEach(item => {
     resetState[item.id] = false
     localStorage.removeItem(item.id)
+    localStorage.removeItem(`${item.id}-label`)
   })
   checkedItems.value = resetState
+  customLabels.value = {}
 }
 
 // 完了数を計算
@@ -110,18 +161,55 @@ defineExpose({
       <li
         v-for="item in checklistItems"
         :key="item.id"
-        :class="['checklist-item', { checked: checkedItems[item.id] }]"
-        @click="handleCheckChange(item.id)"
+        :class="['checklist-item', { checked: checkedItems[item.id], editing: editingItemId === item.id }]"
       >
+        <button
+          v-if="editingItemId !== item.id"
+          class="edit-button"
+          @click.stop="startEdit(item.id)"
+          title="編集"
+        >
+          ✏️
+        </button>
+        <label 
+          v-if="editingItemId !== item.id"
+          :for="item.id" 
+          @click.prevent="handleCheckChange(item.id)"
+        >
+          {{ getDisplayLabel(item) }}
+        </label>
         <input
+          v-if="editingItemId !== item.id"
           type="checkbox"
           :id="item.id"
           :checked="checkedItems[item.id]"
           @click.stop="handleCheckChange(item.id)"
         />
-        <label :for="item.id" @click.prevent>
-          {{ item.label }}
-        </label>
+        
+        <div v-if="editingItemId === item.id" class="edit-mode">
+          <input
+            type="text"
+            v-model="editingText"
+            class="edit-input"
+            @click.stop
+            @keyup.enter="saveEdit(item.id)"
+            @keyup.esc="cancelEdit"
+          />
+          <button
+            class="save-button"
+            @click.stop="saveEdit(item.id)"
+            title="保存"
+          >
+            ✓
+          </button>
+          <button
+            class="cancel-button"
+            @click.stop="cancelEdit"
+            title="キャンセル"
+          >
+            ✕
+          </button>
+        </div>
       </li>
     </ul>
   </div>
@@ -169,7 +257,7 @@ defineExpose({
 .checklist-item input[type="checkbox"] {
   width: 24px;
   height: 24px;
-  margin-right: 15px;
+  margin-left: 15px;
   cursor: pointer;
   accent-color: #667eea;
 }
@@ -180,6 +268,68 @@ defineExpose({
   font-size: 1.1em;
   color: #333;
   user-select: none;
+}
+
+.checklist-item.editing {
+  background: #fff3cd;
+  cursor: default;
+}
+
+.edit-button {
+  background: none;
+  border: none;
+  cursor: pointer;
+  font-size: 1.2em;
+  padding: 5px;
+  margin-right: 15px;
+  opacity: 0.6;
+  transition: opacity 0.3s ease;
+}
+
+.edit-button:hover {
+  opacity: 1;
+}
+
+.edit-mode {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  flex: 1;
+}
+
+.edit-input {
+  flex: 1;
+  padding: 8px;
+  border: 2px solid #667eea;
+  border-radius: 5px;
+  font-size: 1em;
+  outline: none;
+}
+
+.save-button,
+.cancel-button {
+  background: none;
+  border: none;
+  cursor: pointer;
+  font-size: 1.4em;
+  padding: 5px;
+  transition: transform 0.2s ease;
+}
+
+.save-button {
+  color: #28a745;
+}
+
+.save-button:hover {
+  transform: scale(1.2);
+}
+
+.cancel-button {
+  color: #dc3545;
+}
+
+.cancel-button:hover {
+  transform: scale(1.2);
 }
 
 @media (max-width: 600px) {
