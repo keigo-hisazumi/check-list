@@ -262,10 +262,10 @@ const handleReset = () => {
   checklistItems.value.forEach(item => {
     resetState[item.id] = false
     localStorage.removeItem(item.id)
-    localStorage.removeItem(`${item.id}-label`)
+    // カスタムラベルは保持する（リセットしない）
   })
   checkedItems.value = resetState
-  customLabels.value = {}
+  // customLabels.value はリセットしない
 }
 
 // 完了数を計算
