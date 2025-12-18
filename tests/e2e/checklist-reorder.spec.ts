@@ -59,7 +59,7 @@ test.describe('チェックリストの並べ替え機能', () => {
     expect(bagKeyItem).toBe('カギ、イヤホン、社員証');
   });
 
-  test('リセット機能で並び順もクリアされる', async ({ page }) => {
+  test('リセット機能で並び順は保持される', async ({ page }) => {
     await page.goto('/');
     
     // LocalStorageに並び順を設定
@@ -83,8 +83,8 @@ test.describe('チェックリストの並べ替え機能', () => {
     // ページをリロード
     await page.reload();
     
-    // リロード後、元の順序に戻っていることを確認
+    // リロード後も並び順が保持されていることを確認
     const firstItemAfterReset = await page.locator('.checklist-item').first().locator('label').textContent();
-    expect(firstItemAfterReset).toBe('紅茶、コーヒー');
+    expect(firstItemAfterReset).toBe('弁当');
   });
 });

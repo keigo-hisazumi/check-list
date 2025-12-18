@@ -264,9 +264,6 @@ const handleReset = () => {
   })
   checkedItems.value = resetState
   customLabels.value = {}
-  // 並び順もリセット
-  localStorage.removeItem('bag-checklist-order')
-  checklistItems.value = [...initialChecklistItems]
 }
 
 // 完了数を計算
