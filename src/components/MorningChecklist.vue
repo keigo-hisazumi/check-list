@@ -52,7 +52,6 @@ const customLabels = ref<Record<string, string>>({})
 const draggingItemId = ref<string | null>(null)
 const dragStartY = ref<number>(0)
 const dragCurrentY = ref<number>(0)
-const dragStartTime = ref<number>(0)
 const longPressTimer = ref<number | null>(null)
 const isDragging = ref<boolean>(false)
 const dragItemIndex = ref<number>(-1)
@@ -83,6 +82,9 @@ const loadItemOrder = () => {
       console.error('Failed to load item order:', e)
       checklistItems.value = [...initialChecklistItems]
     }
+  } else {
+    // 保存された順序がない場合は初期順序を使用
+    checklistItems.value = [...initialChecklistItems]
   }
 }
 
@@ -176,9 +178,10 @@ const handleTouchStart = (e: TouchEvent, itemId: string, index: number) => {
   // 編集モード中は長押しを無効化
   if (editingItemId.value !== null) return
   
+  if (!e.touches.length) return
+  
   dragStartY.value = e.touches[0].clientY
   dragCurrentY.value = e.touches[0].clientY
-  dragStartTime.value = Date.now()
   dragItemIndex.value = index
   
   // 長押し判定タイマーを開始
@@ -190,6 +193,8 @@ const handleTouchStart = (e: TouchEvent, itemId: string, index: number) => {
 
 // タッチ移動
 const handleTouchMove = (e: TouchEvent) => {
+  if (!e.touches.length) return
+  
   if (!isDragging.value) {
     // 長押し前に移動した場合は長押しをキャンセル
     const moveDistance = Math.abs(e.touches[0].clientY - dragStartY.value)
