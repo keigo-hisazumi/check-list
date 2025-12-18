@@ -255,15 +255,14 @@ const handleTouchCancel = () => {
 }
 
 // リセットボタンのハンドラー
+// チェック状態のみをリセットし、カスタムラベルは保持する
 const handleReset = () => {
   const resetState: Record<string, boolean> = {}
   checklistItems.value.forEach(item => {
     resetState[item.id] = false
     localStorage.removeItem(item.id)
-    // カスタムラベルは保持する（リセットしない）
   })
   checkedItems.value = resetState
-  // customLabels.value はリセットしない
 }
 
 // 完了数を計算
