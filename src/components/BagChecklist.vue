@@ -23,8 +23,8 @@ interface ChecklistItem {
   label: string
 }
 
-// カバンの中の項目の定義
-const checklistItems: ChecklistItem[] = [
+// カバンの中の項目の初期定義
+const initialChecklistItems: ChecklistItem[] = [
   { id: 'bag-mask', label: 'マスク、手帳、教材' },
   { id: 'bag-keys', label: 'カギ、イヤホン、社員証' },
   { id: 'bag-card-case', label: '名刺入れ、クシ、ハンカチ' },
@@ -35,6 +35,9 @@ const checklistItems: ChecklistItem[] = [
   { id: 'bag-bottle', label: '水筒' },
 ]
 
+// 並べ替え可能な項目リスト
+const checklistItems = ref<ChecklistItem[]>([...initialChecklistItems])
+
 // チェック状態の管理
 const checkedItems = ref<Record<string, boolean>>({})
 
@@ -43,10 +46,54 @@ const editingItemId = ref<string | null>(null)
 const editingText = ref<string>('')
 const customLabels = ref<Record<string, string>>({})
 
+// ドラッグ&ドロップの状態管理
+const draggingItemId = ref<string | null>(null)
+const dragStartY = ref<number>(0)
+const dragCurrentY = ref<number>(0)
+const dragStartTime = ref<number>(0)
+const longPressTimer = ref<number | null>(null)
+const isDragging = ref<boolean>(false)
+const dragItemIndex = ref<number>(-1)
+const LONG_PRESS_DURATION = 500 // 長押し判定時間（ミリ秒）
+
+// ローカルストレージから並び順を読み込む
+const loadItemOrder = () => {
+  const savedOrder = localStorage.getItem('bag-checklist-order')
+  if (savedOrder) {
+    try {
+      const orderIds: string[] = JSON.parse(savedOrder)
+      // 保存された順序に従ってアイテムを並べ替え
+      const orderedItems: ChecklistItem[] = []
+      orderIds.forEach(id => {
+        const item = initialChecklistItems.find(item => item.id === id)
+        if (item) {
+          orderedItems.push(item)
+        }
+      })
+      // 新しく追加されたアイテムがある場合は末尾に追加
+      initialChecklistItems.forEach(item => {
+        if (!orderIds.includes(item.id)) {
+          orderedItems.push(item)
+        }
+      })
+      checklistItems.value = orderedItems
+    } catch (e) {
+      console.error('Failed to load item order:', e)
+      checklistItems.value = [...initialChecklistItems]
+    }
+  }
+}
+
+// 並び順をローカルストレージに保存
+const saveItemOrder = () => {
+  const orderIds = checklistItems.value.map(item => item.id)
+  localStorage.setItem('bag-checklist-order', JSON.stringify(orderIds))
+}
+
 // ローカルストレージからチェック状態を読み込む
 const loadCheckedState = () => {
   const saved: Record<string, boolean> = {}
-  checklistItems.forEach(item => {
+  checklistItems.value.forEach(item => {
     const value = localStorage.getItem(item.id)
     saved[item.id] = value === 'true'
   })
@@ -56,7 +103,7 @@ const loadCheckedState = () => {
 // ローカルストレージからカスタムラベルを読み込む
 const loadCustomLabels = () => {
   const saved: Record<string, string> = {}
-  checklistItems.forEach(item => {
+  checklistItems.value.forEach(item => {
     const value = localStorage.getItem(`${item.id}-label`)
     if (value) {
       saved[item.id] = value
@@ -67,6 +114,7 @@ const loadCustomLabels = () => {
 
 // コンポーネントマウント時に状態を読み込む
 onMounted(() => {
+  loadItemOrder()
   loadCheckedState()
   loadCustomLabels()
 })
@@ -93,7 +141,7 @@ const handleCheckChange = (id: string) => {
 // 編集モードを開始
 const startEdit = (id: string) => {
   editingItemId.value = id
-  editingText.value = customLabels.value[id] || checklistItems.find(item => item.id === id)?.label || ''
+  editingText.value = customLabels.value[id] || checklistItems.value.find(item => item.id === id)?.label || ''
 }
 
 // 編集をキャンセル
@@ -121,31 +169,114 @@ const getDisplayLabel = (item: ChecklistItem): string => {
   return customLabels.value[item.id] || item.label
 }
 
+// 長押し開始
+const handleTouchStart = (e: TouchEvent, itemId: string, index: number) => {
+  // 編集モード中は長押しを無効化
+  if (editingItemId.value !== null) return
+  
+  dragStartY.value = e.touches[0].clientY
+  dragCurrentY.value = e.touches[0].clientY
+  dragStartTime.value = Date.now()
+  dragItemIndex.value = index
+  
+  // 長押し判定タイマーを開始
+  longPressTimer.value = window.setTimeout(() => {
+    draggingItemId.value = itemId
+    isDragging.value = true
+  }, LONG_PRESS_DURATION)
+}
+
+// タッチ移動
+const handleTouchMove = (e: TouchEvent) => {
+  if (!isDragging.value) {
+    // 長押し前に移動した場合は長押しをキャンセル
+    const moveDistance = Math.abs(e.touches[0].clientY - dragStartY.value)
+    if (moveDistance > 10 && longPressTimer.value !== null) {
+      window.clearTimeout(longPressTimer.value)
+      longPressTimer.value = null
+    }
+    return
+  }
+  
+  e.preventDefault()
+  dragCurrentY.value = e.touches[0].clientY
+  
+  // ドラッグ中の要素の位置を更新
+  const dragDistance = dragCurrentY.value - dragStartY.value
+  const currentIndex = checklistItems.value.findIndex(item => item.id === draggingItemId.value)
+  
+  if (currentIndex === -1) return
+  
+  // アイテムの高さを推定（実際の要素から取得するのが理想）
+  const itemHeight = 50 // おおよそのアイテムの高さ（padding含む）
+  const indexChange = Math.round(dragDistance / itemHeight)
+  const newIndex = Math.max(0, Math.min(checklistItems.value.length - 1, dragItemIndex.value + indexChange))
+  
+  // インデックスが変わった場合、アイテムを入れ替え
+  if (newIndex !== currentIndex) {
+    const items = [...checklistItems.value]
+    const [draggedItem] = items.splice(currentIndex, 1)
+    items.splice(newIndex, 0, draggedItem)
+    checklistItems.value = items
+    dragStartY.value = dragCurrentY.value
+    dragItemIndex.value = newIndex
+  }
+}
+
+// タッチ終了
+const handleTouchEnd = () => {
+  // 長押しタイマーをクリア
+  if (longPressTimer.value !== null) {
+    window.clearTimeout(longPressTimer.value)
+    longPressTimer.value = null
+  }
+  
+  // ドラッグ中だった場合、並び順を保存
+  if (isDragging.value) {
+    saveItemOrder()
+  }
+  
+  // 状態をリセット
+  draggingItemId.value = null
+  isDragging.value = false
+  dragItemIndex.value = -1
+  dragStartY.value = 0
+  dragCurrentY.value = 0
+}
+
+// タッチキャンセル
+const handleTouchCancel = () => {
+  handleTouchEnd()
+}
+
 // リセットボタンのハンドラー
 const handleReset = () => {
   const resetState: Record<string, boolean> = {}
-  checklistItems.forEach(item => {
+  checklistItems.value.forEach(item => {
     resetState[item.id] = false
     localStorage.removeItem(item.id)
     localStorage.removeItem(`${item.id}-label`)
   })
   checkedItems.value = resetState
   customLabels.value = {}
+  // 並び順もリセット
+  localStorage.removeItem('bag-checklist-order')
+  checklistItems.value = [...initialChecklistItems]
 }
 
 // 完了数を計算
 const completedCount = computed(() => 
   Object.values(checkedItems.value).filter(Boolean).length
 )
-const totalCount = checklistItems.length
+const totalCount = computed(() => checklistItems.value.length)
 
 // isActiveのcomputed版を作成
 const isActiveComputed = computed(() => props.isActive)
 
 // 統計情報が変更されたときに親コンポーネントに通知
-watch([completedCount, isActiveComputed], () => {
+watch([completedCount, totalCount, isActiveComputed], () => {
   if (props.isActive) {
-    emit('update:stats', { completedCount: completedCount.value, totalCount })
+    emit('update:stats', { completedCount: completedCount.value, totalCount: totalCount.value })
   }
 }, { immediate: true })
 
@@ -159,9 +290,17 @@ defineExpose({
   <div class="container">
     <ul class="checklist">
       <li
-        v-for="item in checklistItems"
+        v-for="(item, index) in checklistItems"
         :key="item.id"
-        :class="['checklist-item', { checked: checkedItems[item.id], editing: editingItemId === item.id }]"
+        :class="['checklist-item', { 
+          checked: checkedItems[item.id], 
+          editing: editingItemId === item.id,
+          dragging: draggingItemId === item.id
+        }]"
+        @touchstart="(e) => handleTouchStart(e, item.id, index)"
+        @touchmove="handleTouchMove"
+        @touchend="handleTouchEnd"
+        @touchcancel="handleTouchCancel"
       >
         <button
           v-if="editingItemId !== item.id"
@@ -247,6 +386,15 @@ defineExpose({
   border-radius: 10px;
   transition: all 0.3s ease;
   cursor: pointer;
+  touch-action: none; /* ブラウザのデフォルトタッチ動作を無効化 */
+}
+
+.checklist-item.dragging {
+  opacity: 0.7;
+  transform: scale(1.05);
+  box-shadow: 0 8px 16px rgba(0, 0, 0, 0.2);
+  z-index: 1000;
+  transition: none; /* ドラッグ中はトランジションを無効化 */
 }
 
 .checklist-item.checked {
