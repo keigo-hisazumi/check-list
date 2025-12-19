@@ -57,6 +57,7 @@ const longPressTimer = ref<number | null>(null)
 const isDragging = ref<boolean>(false)
 const dragItemIndex = ref<number>(-1)
 const LONG_PRESS_DURATION = 500 // 長押し判定時間（ミリ秒）
+const itemRefs = ref<(HTMLElement | null)[]>([]) // 各アイテムのDOM要素参照
 
 // ローカルストレージから並び順を読み込む
 const loadItemOrder = () => {
@@ -174,6 +175,15 @@ const getDisplayLabel = (item: ChecklistItem): string => {
   return customLabels.value[item.id] || item.label
 }
 
+// 要素の実際の高さ（マージンを含む）を取得
+const getElementTotalHeight = (element: HTMLElement): number => {
+  const height = element.offsetHeight
+  const style = window.getComputedStyle(element)
+  const marginTop = parseFloat(style.marginTop)
+  const marginBottom = parseFloat(style.marginBottom)
+  return height + marginTop + marginBottom
+}
+
 // 長押し開始
 const handleTouchStart = (e: TouchEvent, itemId: string, index: number) => {
   // 編集モード中は長押しを無効化
@@ -213,26 +223,78 @@ const handleTouchMove = (e: TouchEvent) => {
   dragOffsetY.value = dragCurrentY.value - dragStartY.value
   
   // ドラッグ中の要素の位置を更新
-  const dragDistance = dragCurrentY.value - dragStartY.value
   const currentIndex = checklistItems.value.findIndex(item => item.id === draggingItemId.value)
   
   if (currentIndex === -1) return
   
-  // アイテムの高さを推定（実際の要素から取得するのが理想）
-  const itemHeight = 50 // おおよそのアイテムの高さ（padding含む）
-  const indexChange = Math.round(dragDistance / itemHeight)
-  const newIndex = Math.max(0, Math.min(checklistItems.value.length - 1, dragItemIndex.value + indexChange))
+  // 累積ドラッグ距離を計算
+  const totalDragDistance = dragCurrentY.value - dragStartY.value
+  
+  // 実際のアイテムの高さを取得して、移動先のインデックスを計算
+  let accumulatedHeight = 0
+  let newIndex = dragItemIndex.value
+  
+  if (totalDragDistance > 0) {
+    // 下方向へのドラッグ
+    for (let i = dragItemIndex.value + 1; i < checklistItems.value.length; i++) {
+      const itemElement = itemRefs.value[i]
+      if (itemElement) {
+        const itemHeight = getElementTotalHeight(itemElement)
+        accumulatedHeight += itemHeight
+        if (totalDragDistance > accumulatedHeight - itemHeight / 2) {
+          newIndex = i
+        } else {
+          break
+        }
+      }
+    }
+  } else if (totalDragDistance < 0) {
+    // 上方向へのドラッグ
+    for (let i = dragItemIndex.value - 1; i >= 0; i--) {
+      const itemElement = itemRefs.value[i]
+      if (itemElement) {
+        const itemHeight = getElementTotalHeight(itemElement)
+        accumulatedHeight -= itemHeight
+        if (totalDragDistance < accumulatedHeight + itemHeight / 2) {
+          newIndex = i
+        } else {
+          break
+        }
+      }
+    }
+  }
   
   // インデックスが変わった場合、アイテムを入れ替え
   if (newIndex !== currentIndex) {
+    // 並べ替え前に高さの差分を計算（マージンを含む）
+    let heightDiff = 0
+    if (newIndex > currentIndex) {
+      // 下方向への移動：currentIndex と newIndex の間の要素の高さの合計
+      for (let i = currentIndex + 1; i <= newIndex; i++) {
+        const itemElement = itemRefs.value[i]
+        if (itemElement) {
+          heightDiff += getElementTotalHeight(itemElement)
+        }
+      }
+    } else {
+      // 上方向への移動：newIndex と currentIndex の間の要素の高さの合計（負の値）
+      for (let i = newIndex; i < currentIndex; i++) {
+        const itemElement = itemRefs.value[i]
+        if (itemElement) {
+          heightDiff -= getElementTotalHeight(itemElement)
+        }
+      }
+    }
+    
     const items = [...checklistItems.value]
     const [draggedItem] = items.splice(currentIndex, 1)
     items.splice(newIndex, 0, draggedItem)
     checklistItems.value = items
-    dragStartY.value = dragCurrentY.value
+    
+    // 新しい位置を基準に更新
+    dragStartY.value = dragStartY.value + heightDiff
     dragItemIndex.value = newIndex
-    // 並び替え後、オフセットをリセット
-    dragOffsetY.value = 0
+    dragOffsetY.value = dragCurrentY.value - dragStartY.value
   }
 }
 
@@ -301,6 +363,7 @@ defineExpose({
       <li
         v-for="(item, index) in checklistItems"
         :key="item.id"
+        :ref="el => { itemRefs[index] = el ? (el as HTMLElement) : null }"
         :class="['checklist-item', { 
           checked: checkedItems[item.id], 
           editing: editingItemId === item.id,
