@@ -57,6 +57,7 @@ const longPressTimer = ref<number | null>(null)
 const isDragging = ref<boolean>(false)
 const dragItemIndex = ref<number>(-1)
 const LONG_PRESS_DURATION = 500 // 長押し判定時間（ミリ秒）
+const itemRefs = ref<(HTMLElement | null)[]>([]) // 各アイテムのDOM要素参照
 
 // ローカルストレージから並び順を読み込む
 const loadItemOrder = () => {
@@ -213,15 +214,46 @@ const handleTouchMove = (e: TouchEvent) => {
   dragOffsetY.value = dragCurrentY.value - dragStartY.value
   
   // ドラッグ中の要素の位置を更新
-  const dragDistance = dragCurrentY.value - dragStartY.value
   const currentIndex = checklistItems.value.findIndex(item => item.id === draggingItemId.value)
   
   if (currentIndex === -1) return
   
-  // アイテムの高さを推定（実際の要素から取得するのが理想）
-  const itemHeight = 50 // おおよそのアイテムの高さ（padding含む）
-  const indexChange = Math.round(dragDistance / itemHeight)
-  const newIndex = Math.max(0, Math.min(checklistItems.value.length - 1, dragItemIndex.value + indexChange))
+  // 累積ドラッグ距離を計算
+  const totalDragDistance = dragCurrentY.value - dragStartY.value
+  
+  // 実際のアイテムの高さを取得して、移動先のインデックスを計算
+  let accumulatedHeight = 0
+  let newIndex = dragItemIndex.value
+  
+  if (totalDragDistance > 0) {
+    // 下方向へのドラッグ
+    for (let i = dragItemIndex.value + 1; i < checklistItems.value.length; i++) {
+      const itemElement = itemRefs.value[i]
+      if (itemElement) {
+        const itemHeight = itemElement.offsetHeight
+        accumulatedHeight += itemHeight
+        if (totalDragDistance > accumulatedHeight - itemHeight / 2) {
+          newIndex = i
+        } else {
+          break
+        }
+      }
+    }
+  } else if (totalDragDistance < 0) {
+    // 上方向へのドラッグ
+    for (let i = dragItemIndex.value - 1; i >= 0; i--) {
+      const itemElement = itemRefs.value[i]
+      if (itemElement) {
+        const itemHeight = itemElement.offsetHeight
+        accumulatedHeight -= itemHeight
+        if (totalDragDistance < accumulatedHeight + itemHeight / 2) {
+          newIndex = i
+        } else {
+          break
+        }
+      }
+    }
+  }
   
   // インデックスが変わった場合、アイテムを入れ替え
   if (newIndex !== currentIndex) {
@@ -229,11 +261,31 @@ const handleTouchMove = (e: TouchEvent) => {
     const [draggedItem] = items.splice(currentIndex, 1)
     items.splice(newIndex, 0, draggedItem)
     checklistItems.value = items
-    dragStartY.value = dragCurrentY.value
+    
+    // 新しい位置を基準に更新
+    const heightDiff = getHeightDifference(currentIndex, newIndex)
+    dragStartY.value = dragStartY.value + heightDiff
     dragItemIndex.value = newIndex
-    // 並び替え後、オフセットをリセット
-    dragOffsetY.value = 0
+    dragOffsetY.value = dragCurrentY.value - dragStartY.value
   }
+}
+
+// インデックス間の高さの差を計算
+const getHeightDifference = (fromIndex: number, toIndex: number): number => {
+  if (fromIndex === toIndex) return 0
+  
+  let totalHeight = 0
+  const start = Math.min(fromIndex, toIndex)
+  const end = Math.max(fromIndex, toIndex)
+  
+  for (let i = start; i < end; i++) {
+    const itemElement = itemRefs.value[i]
+    if (itemElement) {
+      totalHeight += itemElement.offsetHeight
+    }
+  }
+  
+  return fromIndex < toIndex ? totalHeight : -totalHeight
 }
 
 // タッチ終了
@@ -301,6 +353,7 @@ defineExpose({
       <li
         v-for="(item, index) in checklistItems"
         :key="item.id"
+        :ref="el => { itemRefs[index] = el as HTMLElement }"
         :class="['checklist-item', { 
           checked: checkedItems[item.id], 
           editing: editingItemId === item.id,
