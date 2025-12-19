@@ -166,7 +166,7 @@ test.describe('チェックリストの編集機能', () => {
     await expect(page.locator('text=紅茶、コーヒー')).toBeVisible();
   });
 
-  test('リセット機能でカスタムラベルもクリアされる', async ({ page }) => {
+  test('リセット機能でカスタムラベルは保持される', async ({ page }) => {
     await page.goto('/');
     
     // 最初の項目を編集
@@ -180,14 +180,21 @@ test.describe('チェックリストの編集機能', () => {
     // 編集されたテキストが表示されることを確認
     await expect(page.locator('text=カスタムラベルテスト')).toBeVisible();
     
+    // 項目をチェック
+    await page.locator('.checkbox-button').first().click();
+    
     // リセットボタンをクリック
     await page.locator('button.reset-button').filter({ hasText: 'すべてリセット' }).first().click();
+    
+    // チェックは解除されているが、カスタムラベルは保持されていることを確認
+    await expect(page.locator('text=カスタムラベルテスト')).toBeVisible();
+    await expect(page.locator('.checkbox-button').first()).toHaveAttribute('aria-label', '未チェック');
     
     // ページをリロード
     await page.reload();
     
-    // リロード後、元のラベルに戻っていることを確認
-    await expect(page.locator('text=紅茶、コーヒー')).toBeVisible();
-    await expect(page.locator('text=カスタムラベルテスト')).not.toBeVisible();
+    // リロード後もカスタムラベルが保持されていることを確認
+    await expect(page.locator('text=カスタムラベルテスト')).toBeVisible();
+    await expect(page.locator('text=紅茶、コーヒー')).not.toBeVisible();
   });
 });
