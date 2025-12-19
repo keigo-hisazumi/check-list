@@ -389,6 +389,9 @@ defineExpose({
   transition: all 0.3s ease;
   cursor: pointer;
   touch-action: none; /* ブラウザのデフォルトタッチ動作を無効化 */
+  user-select: none; /* 長押し時のテキスト選択を防止 */
+  -webkit-user-select: none; /* Safari用 */
+  -moz-user-select: none; /* Firefox用 */
 }
 
 .checklist-item.dragging {
@@ -483,6 +486,9 @@ defineExpose({
   border-radius: 5px;
   font-size: 1em;
   outline: none;
+  user-select: text; /* 編集時はテキスト選択を許可 */
+  -webkit-user-select: text;
+  -moz-user-select: text;
 }
 
 .save-button,

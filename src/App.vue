@@ -240,6 +240,9 @@ const handleTouchEnd = () => {
   align-items: stretch;
   overflow-x: hidden; /* 横スクロールは無効 */
   overflow-y: auto; /* 縦スクロールを有効化 */
+  user-select: none; /* スワイプ時のテキスト選択を防止 */
+  -webkit-user-select: none; /* Safari用 */
+  -moz-user-select: none; /* Firefox用 */
 }
 
 .view-slider {
