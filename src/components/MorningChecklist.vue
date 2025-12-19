@@ -1,5 +1,5 @@
 <script setup lang="ts">
-import { ref, computed, watch, onMounted } from 'vue'
+import { ref, computed, watch, onMounted, nextTick } from 'vue'
 
 // Props定義
 interface Props {
@@ -47,6 +47,8 @@ const checkedItems = ref<Record<string, boolean>>({})
 const editingItemId = ref<string | null>(null)
 const editingText = ref<string>('')
 const customLabels = ref<Record<string, string>>({})
+// 編集中の入力フィールドへの参照（一度に1つの項目のみ編集可能）
+const editInputRef = ref<HTMLInputElement | null>(null)
 
 // ドラッグ&ドロップの状態管理
 const draggingItemId = ref<string | null>(null)
@@ -145,9 +147,17 @@ const handleCheckChange = (id: string) => {
 }
 
 // 編集モードを開始
-const startEdit = (id: string) => {
+const startEdit = async (id: string) => {
   editingItemId.value = id
   editingText.value = customLabels.value[id] || checklistItems.value.find(item => item.id === id)?.label || ''
+  
+  // 次のティックで入力フィールドを表示してスクロール
+  await nextTick()
+  if (editInputRef.value) {
+    editInputRef.value.focus()
+    // 入力フィールドが画面内に表示されるようスクロール
+    editInputRef.value.scrollIntoView({ behavior: 'smooth', block: 'center' })
+  }
 }
 
 // 編集をキャンセル
@@ -405,6 +415,7 @@ defineExpose({
         
         <div v-if="editingItemId === item.id" class="edit-mode">
           <input
+            ref="editInputRef"
             type="text"
             v-model="editingText"
             class="edit-input"
