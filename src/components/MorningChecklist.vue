@@ -353,7 +353,7 @@ defineExpose({
       <li
         v-for="(item, index) in checklistItems"
         :key="item.id"
-        :ref="el => { if (el) itemRefs[index] = el as HTMLElement }"
+        :ref="el => { itemRefs[index] = el ? (el as HTMLElement) : null }"
         :class="['checklist-item', { 
           checked: checkedItems[item.id], 
           editing: editingItemId === item.id,
