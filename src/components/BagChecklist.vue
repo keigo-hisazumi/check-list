@@ -1,5 +1,5 @@
 <script setup lang="ts">
-import { ref, computed, watch, onMounted } from 'vue'
+import { ref, computed, watch, onMounted, nextTick } from 'vue'
 
 // Props定義
 interface Props {
@@ -144,18 +144,17 @@ const handleCheckChange = (id: string) => {
 }
 
 // 編集モードを開始
-const startEdit = (id: string) => {
+const startEdit = async (id: string) => {
   editingItemId.value = id
   editingText.value = customLabels.value[id] || checklistItems.value.find(item => item.id === id)?.label || ''
   
   // 次のティックで入力フィールドを表示してスクロール
-  setTimeout(() => {
-    if (editInputRef.value) {
-      editInputRef.value.focus()
-      // 入力フィールドが画面内に表示されるようスクロール
-      editInputRef.value.scrollIntoView({ behavior: 'smooth', block: 'center' })
-    }
-  }, 100)
+  await nextTick()
+  if (editInputRef.value) {
+    editInputRef.value.focus()
+    // 入力フィールドが画面内に表示されるようスクロール
+    editInputRef.value.scrollIntoView({ behavior: 'smooth', block: 'center' })
+  }
 }
 
 // 編集をキャンセル
