@@ -148,6 +148,16 @@ const handleCheckChange = (id: string) => {
 const startEdit = (id: string) => {
   editingItemId.value = id
   editingText.value = customLabels.value[id] || checklistItems.value.find(item => item.id === id)?.label || ''
+  
+  // 次のティックで入力フィールドを表示してスクロール
+  setTimeout(() => {
+    const input = document.querySelector('.edit-input') as HTMLInputElement
+    if (input) {
+      input.focus()
+      // 入力フィールドが画面内に表示されるようスクロール
+      input.scrollIntoView({ behavior: 'smooth', block: 'center' })
+    }
+  }, 100)
 }
 
 // 編集をキャンセル
