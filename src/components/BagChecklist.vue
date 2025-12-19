@@ -390,6 +390,7 @@ defineExpose({
   user-select: none; /* 長押し時のテキスト選択を防止 */
   -webkit-user-select: none; /* Safari用 */
   -moz-user-select: none; /* Firefox用 */
+  -webkit-touch-callout: none; /* iOS用：長押しメニューを無効化 */
 }
 
 .checklist-item.dragging {
@@ -440,6 +441,9 @@ defineExpose({
   font-size: 1.1em;
   color: #333;
   user-select: none;
+  -webkit-user-select: none;
+  -moz-user-select: none;
+  -webkit-touch-callout: none; /* iOS用：長押しメニューを無効化 */
 }
 
 .checklist-item.editing {
