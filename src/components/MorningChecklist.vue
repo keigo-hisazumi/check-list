@@ -48,7 +48,14 @@ const editingItemId = ref<string | null>(null)
 const editingText = ref<string>('')
 const customLabels = ref<Record<string, string>>({})
 // 編集中の入力フィールドへの参照（一度に1つの項目のみ編集可能）
-const editInputRef = ref<HTMLInputElement | null>(null)
+let editInputElement: HTMLInputElement | null = null
+const setEditInputRef = (el: Element | object | null) => {
+  if (el instanceof HTMLInputElement) {
+    editInputElement = el
+  } else {
+    editInputElement = null
+  }
+}
 
 // ドラッグ&ドロップの状態管理
 const draggingItemId = ref<string | null>(null)
@@ -155,10 +162,10 @@ const startEdit = async (id: string) => {
   await nextTick()
   // 初回のnextTick後、さらに確実にrefが利用可能になるまで待つ
   await nextTick()
-  if (editInputRef.value) {
-    editInputRef.value.focus()
+  if (editInputElement) {
+    editInputElement.focus()
     // 入力フィールドが画面内に表示されるようスクロール
-    editInputRef.value.scrollIntoView({ behavior: 'smooth', block: 'center' })
+    editInputElement.scrollIntoView({ behavior: 'smooth', block: 'center' })
   }
 }
 
@@ -417,7 +424,7 @@ defineExpose({
         
         <div v-if="editingItemId === item.id" class="edit-mode">
           <input
-            ref="editInputRef"
+            :ref="setEditInputRef"
             type="text"
             v-model="editingText"
             class="edit-input"
