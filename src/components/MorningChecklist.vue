@@ -52,6 +52,7 @@ const customLabels = ref<Record<string, string>>({})
 const draggingItemId = ref<string | null>(null)
 const dragStartY = ref<number>(0)
 const dragCurrentY = ref<number>(0)
+const dragOffsetY = ref<number>(0) // ドラッグ中の要素の視覚的な移動量
 const longPressTimer = ref<number | null>(null)
 const isDragging = ref<boolean>(false)
 const dragItemIndex = ref<number>(-1)
@@ -208,6 +209,9 @@ const handleTouchMove = (e: TouchEvent) => {
   e.preventDefault()
   dragCurrentY.value = e.touches[0].clientY
   
+  // ドラッグ中の要素の視覚的な移動量を更新（指に追従させる）
+  dragOffsetY.value = dragCurrentY.value - dragStartY.value
+  
   // ドラッグ中の要素の位置を更新
   const dragDistance = dragCurrentY.value - dragStartY.value
   const currentIndex = checklistItems.value.findIndex(item => item.id === draggingItemId.value)
@@ -227,6 +231,8 @@ const handleTouchMove = (e: TouchEvent) => {
     checklistItems.value = items
     dragStartY.value = dragCurrentY.value
     dragItemIndex.value = newIndex
+    // 並び替え後、オフセットをリセット
+    dragOffsetY.value = 0
   }
 }
 
@@ -249,6 +255,7 @@ const handleTouchEnd = () => {
   dragItemIndex.value = -1
   dragStartY.value = 0
   dragCurrentY.value = 0
+  dragOffsetY.value = 0
 }
 
 // タッチキャンセル
@@ -299,6 +306,7 @@ defineExpose({
           editing: editingItemId === item.id,
           dragging: draggingItemId === item.id
         }]"
+        :style="draggingItemId === item.id ? { transform: `translateY(${dragOffsetY}px)` } : {}"
         @touchstart="(e) => handleTouchStart(e, item.id, index)"
         @touchmove="handleTouchMove"
         @touchend="handleTouchEnd"
@@ -395,11 +403,11 @@ defineExpose({
 }
 
 .checklist-item.dragging {
-  opacity: 0.7;
-  transform: scale(1.05);
-  box-shadow: 0 8px 16px rgba(0, 0, 0, 0.2);
+  opacity: 0.9;
+  box-shadow: 0 8px 16px rgba(0, 0, 0, 0.3);
   z-index: 1000;
   transition: none; /* ドラッグ中はトランジションを無効化 */
+  /* transformはインラインスタイルで動的に適用されます */
 }
 
 .checklist-item.checked {
