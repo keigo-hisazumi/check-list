@@ -243,7 +243,6 @@ const handleTouchEnd = () => {
   user-select: none; /* スワイプ時のテキスト選択を防止 */
   -webkit-user-select: none; /* Safari用 */
   -moz-user-select: none; /* Firefox用 */
-  -ms-user-select: none; /* IE/Edge用 */
 }
 
 .view-slider {

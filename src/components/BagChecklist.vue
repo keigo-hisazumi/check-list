@@ -390,7 +390,6 @@ defineExpose({
   user-select: none; /* 長押し時のテキスト選択を防止 */
   -webkit-user-select: none; /* Safari用 */
   -moz-user-select: none; /* Firefox用 */
-  -ms-user-select: none; /* IE/Edge用 */
 }
 
 .checklist-item.dragging {
@@ -488,7 +487,6 @@ defineExpose({
   user-select: text; /* 編集時はテキスト選択を許可 */
   -webkit-user-select: text;
   -moz-user-select: text;
-  -ms-user-select: text;
 }
 
 .save-button,
