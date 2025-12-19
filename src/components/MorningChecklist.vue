@@ -153,6 +153,8 @@ const startEdit = async (id: string) => {
   
   // 次のティックで入力フィールドを表示してスクロール
   await nextTick()
+  // 初回のnextTick後、さらに確実にrefが利用可能になるまで待つ
+  await nextTick()
   if (editInputRef.value) {
     editInputRef.value.focus()
     // 入力フィールドが画面内に表示されるようスクロール
