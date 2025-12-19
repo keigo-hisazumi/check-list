@@ -45,6 +45,7 @@ const checkedItems = ref<Record<string, boolean>>({})
 const editingItemId = ref<string | null>(null)
 const editingText = ref<string>('')
 const customLabels = ref<Record<string, string>>({})
+// 編集中の入力フィールドへの参照（一度に1つの項目のみ編集可能）
 const editInputRef = ref<HTMLInputElement | null>(null)
 
 // ドラッグ&ドロップの状態管理
