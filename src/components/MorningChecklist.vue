@@ -175,6 +175,15 @@ const getDisplayLabel = (item: ChecklistItem): string => {
   return customLabels.value[item.id] || item.label
 }
 
+// 要素の実際の高さ（マージンを含む）を取得
+const getElementTotalHeight = (element: HTMLElement): number => {
+  const height = element.offsetHeight
+  const style = window.getComputedStyle(element)
+  const marginTop = parseFloat(style.marginTop)
+  const marginBottom = parseFloat(style.marginBottom)
+  return height + marginTop + marginBottom
+}
+
 // 長押し開始
 const handleTouchStart = (e: TouchEvent, itemId: string, index: number) => {
   // 編集モード中は長押しを無効化
@@ -230,7 +239,7 @@ const handleTouchMove = (e: TouchEvent) => {
     for (let i = dragItemIndex.value + 1; i < checklistItems.value.length; i++) {
       const itemElement = itemRefs.value[i]
       if (itemElement) {
-        const itemHeight = itemElement.offsetHeight
+        const itemHeight = getElementTotalHeight(itemElement)
         accumulatedHeight += itemHeight
         if (totalDragDistance > accumulatedHeight - itemHeight / 2) {
           newIndex = i
@@ -244,7 +253,7 @@ const handleTouchMove = (e: TouchEvent) => {
     for (let i = dragItemIndex.value - 1; i >= 0; i--) {
       const itemElement = itemRefs.value[i]
       if (itemElement) {
-        const itemHeight = itemElement.offsetHeight
+        const itemHeight = getElementTotalHeight(itemElement)
         accumulatedHeight -= itemHeight
         if (totalDragDistance < accumulatedHeight + itemHeight / 2) {
           newIndex = i
@@ -257,14 +266,14 @@ const handleTouchMove = (e: TouchEvent) => {
   
   // インデックスが変わった場合、アイテムを入れ替え
   if (newIndex !== currentIndex) {
-    // 並べ替え前に高さの差分を計算
+    // 並べ替え前に高さの差分を計算（マージンを含む）
     let heightDiff = 0
     if (newIndex > currentIndex) {
       // 下方向への移動：currentIndex と newIndex の間の要素の高さの合計
       for (let i = currentIndex + 1; i <= newIndex; i++) {
         const itemElement = itemRefs.value[i]
         if (itemElement) {
-          heightDiff += itemElement.offsetHeight
+          heightDiff += getElementTotalHeight(itemElement)
         }
       }
     } else {
@@ -272,7 +281,7 @@ const handleTouchMove = (e: TouchEvent) => {
       for (let i = newIndex; i < currentIndex; i++) {
         const itemElement = itemRefs.value[i]
         if (itemElement) {
-          heightDiff -= itemElement.offsetHeight
+          heightDiff -= getElementTotalHeight(itemElement)
         }
       }
     }
