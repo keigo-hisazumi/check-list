@@ -47,6 +47,7 @@ const checkedItems = ref<Record<string, boolean>>({})
 const editingItemId = ref<string | null>(null)
 const editingText = ref<string>('')
 const customLabels = ref<Record<string, string>>({})
+const editInputRef = ref<HTMLInputElement | null>(null)
 
 // ドラッグ&ドロップの状態管理
 const draggingItemId = ref<string | null>(null)
@@ -151,11 +152,10 @@ const startEdit = (id: string) => {
   
   // 次のティックで入力フィールドを表示してスクロール
   setTimeout(() => {
-    const input = document.querySelector('.edit-input') as HTMLInputElement
-    if (input) {
-      input.focus()
+    if (editInputRef.value) {
+      editInputRef.value.focus()
       // 入力フィールドが画面内に表示されるようスクロール
-      input.scrollIntoView({ behavior: 'smooth', block: 'center' })
+      editInputRef.value.scrollIntoView({ behavior: 'smooth', block: 'center' })
     }
   }, 100)
 }
@@ -415,6 +415,7 @@ defineExpose({
         
         <div v-if="editingItemId === item.id" class="edit-mode">
           <input
+            ref="editInputRef"
             type="text"
             v-model="editingText"
             class="edit-input"
