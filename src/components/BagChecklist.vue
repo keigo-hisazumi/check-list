@@ -255,35 +255,36 @@ const handleTouchMove = (e: TouchEvent) => {
   
   // インデックスが変わった場合、アイテムを入れ替え
   if (newIndex !== currentIndex) {
+    // 並べ替え前に高さの差分を計算
+    let heightDiff = 0
+    if (newIndex > currentIndex) {
+      // 下方向への移動：currentIndex と newIndex の間の要素の高さの合計
+      for (let i = currentIndex + 1; i <= newIndex; i++) {
+        const itemElement = itemRefs.value[i]
+        if (itemElement) {
+          heightDiff += itemElement.offsetHeight
+        }
+      }
+    } else {
+      // 上方向への移動：newIndex と currentIndex の間の要素の高さの合計（負の値）
+      for (let i = newIndex; i < currentIndex; i++) {
+        const itemElement = itemRefs.value[i]
+        if (itemElement) {
+          heightDiff -= itemElement.offsetHeight
+        }
+      }
+    }
+    
     const items = [...checklistItems.value]
     const [draggedItem] = items.splice(currentIndex, 1)
     items.splice(newIndex, 0, draggedItem)
     checklistItems.value = items
     
     // 新しい位置を基準に更新
-    const heightDiff = getHeightDifference(currentIndex, newIndex)
     dragStartY.value = dragStartY.value + heightDiff
     dragItemIndex.value = newIndex
     dragOffsetY.value = dragCurrentY.value - dragStartY.value
   }
-}
-
-// インデックス間の高さの差を計算
-const getHeightDifference = (fromIndex: number, toIndex: number): number => {
-  if (fromIndex === toIndex) return 0
-  
-  let totalHeight = 0
-  const start = Math.min(fromIndex, toIndex)
-  const end = Math.max(fromIndex, toIndex)
-  
-  for (let i = start; i < end; i++) {
-    const itemElement = itemRefs.value[i]
-    if (itemElement) {
-      totalHeight += itemElement.offsetHeight
-    }
-  }
-  
-  return fromIndex < toIndex ? totalHeight : -totalHeight
 }
 
 // タッチ終了
