@@ -70,13 +70,13 @@ const handleAddChecklist = () => {
   -webkit-backdrop-filter: blur(10px);
   backdrop-filter: blur(10px);
   /* ナビゲーションバーの高さをCSS変数として定義 */
-  --nav-bar-height: calc(8px + env(safe-area-inset-top) + 12px + 14px + 12px + 8px);
+  --nav-bar-height: calc(6px + env(safe-area-inset-top) + 10px + 14px + 10px + 6px);
 }
 
 .nav-scroll-container {
   display: flex;
   align-items: center;
-  padding: calc(8px + env(safe-area-inset-top)) 8px 8px;
+  padding: calc(6px + env(safe-area-inset-top)) 8px 6px;
   overflow-x: auto;
   gap: 8px;
   /* スクロールバーを非表示にする */
@@ -93,7 +93,7 @@ const handleAddChecklist = () => {
   display: flex;
   flex-direction: column;
   align-items: center;
-  padding: 12px 16px;
+  padding: 10px 16px;
   background: none;
   border: none;
   cursor: pointer;
@@ -119,14 +119,14 @@ const handleAddChecklist = () => {
   font-size: 14px;
   font-weight: 500;
   line-height: 1;
-  margin-bottom: 4px;
+  margin-bottom: 0px;
 }
 
 .add-button {
   display: flex;
   align-items: center;
   justify-content: center;
-  padding: 12px 16px;
+  padding: 10px 16px;
   background: none;
   border: none;
   border-radius: 10px;
@@ -153,7 +153,7 @@ const handleAddChecklist = () => {
 @media (max-width: 600px) {
   .navigation-bar {
     /* スマートフォン用のナビゲーションバーの高さ */
-    --nav-bar-height: calc(6px + env(safe-area-inset-top) + 10px + 13px + 10px + 6px);
+    --nav-bar-height: calc(6px + env(safe-area-inset-top) + 8px + 13px + 8px + 6px);
   }
 
   .nav-scroll-container {
@@ -162,7 +162,7 @@ const handleAddChecklist = () => {
   }
 
   .nav-item {
-    padding: 10px 12px;
+    padding: 8px 12px;
     min-width: 90px;
   }
 
@@ -171,7 +171,7 @@ const handleAddChecklist = () => {
   }
   
   .add-button {
-    padding: 10px 12px;
+    padding: 8px 12px;
     min-width: 50px;
   }
 }

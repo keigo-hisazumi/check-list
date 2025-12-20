@@ -428,7 +428,7 @@ const handleTouchEnd = () => {
   touch-action: pan-y; /* 垂直スクロールのみを許可 */
   position: relative;
   /* ナビゲーションバーの高さを定義 */
-  --nav-bar-height: calc(8px + env(safe-area-inset-top) + 12px + 14px + 12px + 8px);
+  --nav-bar-height: calc(6px + env(safe-area-inset-top) + 10px + 14px + 10px + 6px);
 }
 
 .view-container {
@@ -467,7 +467,7 @@ const handleTouchEnd = () => {
 @media (max-width: 600px) {
   .app {
     /* スマートフォン用のナビゲーションバーの高さ */
-    --nav-bar-height: calc(6px + env(safe-area-inset-top) + 10px + 13px + 10px + 6px);
+    --nav-bar-height: calc(6px + env(safe-area-inset-top) + 8px + 13px + 8px + 6px);
   }
 
   .view-wrapper {
