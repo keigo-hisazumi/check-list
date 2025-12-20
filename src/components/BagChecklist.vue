@@ -42,6 +42,7 @@ const checklistItems = ref<ChecklistItem[]>([...initialChecklistItems])
 const checkedItems = ref<Record<string, boolean>>({})
 
 // 編集状態の管理
+const isEditMode = ref<boolean>(false) // 編集モードのフラグ
 const editingItemId = ref<string | null>(null)
 const editingText = ref<string>('')
 const customLabels = ref<Record<string, string>>({})
@@ -203,8 +204,11 @@ const getElementTotalHeight = (element: HTMLElement): number => {
 
 // 長押し開始
 const handleTouchStart = (e: TouchEvent, itemId: string, index: number) => {
-  // 編集モード中は長押しを無効化
+  // 編集中の項目がある場合は長押しを無効化
   if (editingItemId.value !== null) return
+  
+  // 編集モードでない場合は長押しを無効化
+  if (!isEditMode.value) return
   
   if (!e.touches.length) return
   
@@ -368,9 +372,25 @@ watch([completedCount, totalCount, isActiveComputed], () => {
   }
 }, { immediate: true })
 
-// リセット機能を外部に公開
+// 編集モードを有効化
+const enableEditMode = () => {
+  isEditMode.value = true
+}
+
+// 編集モードを無効化
+const disableEditMode = () => {
+  isEditMode.value = false
+  // 編集中の項目があればキャンセル
+  if (editingItemId.value !== null) {
+    cancelEdit()
+  }
+}
+
+// リセット機能と編集モード制御を外部に公開
 defineExpose({
-  handleReset
+  handleReset,
+  enableEditMode,
+  disableEditMode
 })
 </script>
 
@@ -392,31 +412,31 @@ defineExpose({
         @touchend="handleTouchEnd"
         @touchcancel="handleTouchCancel"
       >
-        <button
-          v-if="editingItemId !== item.id"
-          class="edit-button"
-          @click.stop="startEdit(item.id)"
-          title="編集"
-        >
-          <svg xmlns="http://www.w3.org/2000/svg" height="20" viewBox="0 -960 960 960" width="20" fill="currentColor">
-            <path d="M200-200h57l391-391-57-57-391 391v57Zm-80 80v-170l528-527q12-11 26.5-17t30.5-6q16 0 31 6t26 18l55 56q12 11 17.5 26t5.5 30q0 16-5.5 30.5T817-647L290-120H120Zm640-584-56-56 56 56Zm-141 85-28-29 57 57-29-28Z"/>
-          </svg>
-        </button>
         <label 
           v-if="editingItemId !== item.id"
           :for="item.id" 
-          @click.prevent="handleCheckChange(item.id)"
+          @click.prevent="isEditMode ? startEdit(item.id) : handleCheckChange(item.id)"
         >
           {{ getDisplayLabel(item) }}
         </label>
         <button
-          v-if="editingItemId !== item.id"
+          v-if="editingItemId !== item.id && !isEditMode"
           class="checkbox-button"
           @click.stop="handleCheckChange(item.id)"
           :aria-label="checkedItems[item.id] ? 'チェック済み' : '未チェック'"
         >
           <svg v-if="checkedItems[item.id]" xmlns="http://www.w3.org/2000/svg" height="24" viewBox="0 -960 960 960" width="24" fill="currentColor">
             <path d="M382-240 154-468l57-57 171 171 367-367 57 57-424 424Z"/>
+          </svg>
+        </button>
+        <button
+          v-if="editingItemId !== item.id && isEditMode"
+          class="edit-icon-button"
+          @click.stop="startEdit(item.id)"
+          title="この項目を編集"
+        >
+          <svg xmlns="http://www.w3.org/2000/svg" height="24" viewBox="0 -960 960 960" width="24" fill="currentColor">
+            <path d="M200-200h57l391-391-57-57-391 391v57Zm-80 80v-170l528-527q12-11 26.5-17t30.5-6q16 0 31 6t26 18l55 56q12 11 17.5 26t5.5 30q0 16-5.5 30.5T817-647L290-120H120Zm640-584-56-56 56 56Zm-141 85-28-29 57 57-29-28Z"/>
           </svg>
         </button>
         
@@ -565,6 +585,30 @@ defineExpose({
 .edit-button svg {
   width: 20px;
   height: 20px;
+}
+
+.edit-icon-button {
+  background: none;
+  border: none;
+  cursor: pointer;
+  padding: 0;
+  margin-left: 15px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  color: #667eea;
+  transition: transform 0.2s ease;
+  min-width: 24px;
+  min-height: 24px;
+}
+
+.edit-icon-button:hover {
+  transform: scale(1.1);
+}
+
+.edit-icon-button svg {
+  width: 24px;
+  height: 24px;
 }
 
 .edit-mode {

@@ -14,9 +14,12 @@ test.describe('チェックリストの編集機能', () => {
     // 朝やることタブが表示されていることを確認
     await expect(page.locator('text=朝やること')).toBeVisible();
     
-    // 最初の項目の編集ボタンをクリック
-    const firstEditButton = page.locator('button.edit-button').first();
-    await firstEditButton.click();
+    // フッターの「項目を編集」ボタンをクリックして編集モードに入る
+    await page.getByRole('button', { name: '項目を編集' }).click();
+    
+    // 最初の項目の編集アイコンをクリック
+    const firstEditIcon = page.locator('button.edit-icon-button').first();
+    await firstEditIcon.click();
     
     // 編集入力フィールドが表示されることを確認
     const editInput = page.locator('input.edit-input');
@@ -39,9 +42,12 @@ test.describe('チェックリストの編集機能', () => {
   test('編集をキャンセルできる', async ({ page }) => {
     await page.goto('/');
     
-    // 最初の項目の編集ボタンをクリック
-    const firstEditButton = page.locator('button.edit-button').first();
-    await firstEditButton.click();
+    // フッターの「項目を編集」ボタンをクリックして編集モードに入る
+    await page.getByRole('button', { name: '項目を編集' }).click();
+    
+    // 最初の項目の編集アイコンをクリック
+    const firstEditIcon = page.locator('button.edit-icon-button').first();
+    await firstEditIcon.click();
     
     // 編集入力フィールドが表示されることを確認
     const editInput = page.locator('input.edit-input');
@@ -61,9 +67,12 @@ test.describe('チェックリストの編集機能', () => {
   test('編集した内容がページリロード後も保持される', async ({ page }) => {
     await page.goto('/');
     
+    // フッターの「項目を編集」ボタンをクリックして編集モードに入る
+    await page.getByRole('button', { name: '項目を編集' }).click();
+    
     // 最初の項目を編集
-    const firstEditButton = page.locator('button.edit-button').first();
-    await firstEditButton.click();
+    const firstEditIcon = page.locator('button.edit-icon-button').first();
+    await firstEditIcon.click();
     
     const editInput = page.locator('input.edit-input');
     await editInput.fill('永続化テスト');
@@ -89,8 +98,11 @@ test.describe('チェックリストの編集機能', () => {
     // カバンの中の進捗表示が表示されるまで待つ
     await page.locator('.progress').filter({ hasText: '/ 8 完了' }).waitFor({ state: 'visible' });
     
-    // bag-maskの編集ボタンをクリック（labelのfor属性を使ってリスト項目を特定）
-    await page.locator('label[for="bag-mask"]').locator('..').locator('button.edit-button').click();
+    // フッターの「項目を編集」ボタンをクリックして編集モードに入る
+    await page.getByRole('button', { name: '項目を編集' }).click();
+    
+    // bag-maskの編集アイコンをクリック（labelのfor属性を使ってリスト項目を特定）
+    await page.locator('label[for="bag-mask"]').locator('..').locator('button.edit-icon-button').click();
     
     // 編集入力フィールドが表示されることを確認
     const editInput = page.locator('input.edit-input');
@@ -109,9 +121,12 @@ test.describe('チェックリストの編集機能', () => {
   test('Enterキーで保存できる', async ({ page }) => {
     await page.goto('/');
     
-    // 最初の項目の編集ボタンをクリック
-    const firstEditButton = page.locator('button.edit-button').first();
-    await firstEditButton.click();
+    // フッターの「項目を編集」ボタンをクリックして編集モードに入る
+    await page.getByRole('button', { name: '項目を編集' }).click();
+    
+    // 最初の項目の編集アイコンをクリック
+    const firstEditIcon = page.locator('button.edit-icon-button').first();
+    await firstEditIcon.click();
     
     // 編集入力フィールドが表示されることを確認
     const editInput = page.locator('input.edit-input');
@@ -128,9 +143,12 @@ test.describe('チェックリストの編集機能', () => {
   test('Escapeキーでキャンセルできる', async ({ page }) => {
     await page.goto('/');
     
-    // 最初の項目の編集ボタンをクリック
-    const firstEditButton = page.locator('button.edit-button').first();
-    await firstEditButton.click();
+    // フッターの「項目を編集」ボタンをクリックして編集モードに入る
+    await page.getByRole('button', { name: '項目を編集' }).click();
+    
+    // 最初の項目の編集アイコンをクリック
+    const firstEditIcon = page.locator('button.edit-icon-button').first();
+    await firstEditIcon.click();
     
     // 編集入力フィールドが表示されることを確認
     const editInput = page.locator('input.edit-input');
@@ -148,9 +166,12 @@ test.describe('チェックリストの編集機能', () => {
   test('空白のみのテキストは保存されない', async ({ page }) => {
     await page.goto('/');
     
-    // 最初の項目の編集ボタンをクリック
-    const firstEditButton = page.locator('button.edit-button').first();
-    await firstEditButton.click();
+    // フッターの「項目を編集」ボタンをクリックして編集モードに入る
+    await page.getByRole('button', { name: '項目を編集' }).click();
+    
+    // 最初の項目の編集アイコンをクリック
+    const firstEditIcon = page.locator('button.edit-icon-button').first();
+    await firstEditIcon.click();
     
     // 編集入力フィールドが表示されることを確認
     const editInput = page.locator('input.edit-input');
@@ -169,9 +190,12 @@ test.describe('チェックリストの編集機能', () => {
   test('リセット機能でカスタムラベルは保持される', async ({ page }) => {
     await page.goto('/');
     
+    // フッターの「項目を編集」ボタンをクリックして編集モードに入る
+    await page.getByRole('button', { name: '項目を編集' }).click();
+    
     // 最初の項目を編集
-    const firstEditButton = page.locator('button.edit-button').first();
-    await firstEditButton.click();
+    const firstEditIcon = page.locator('button.edit-icon-button').first();
+    await firstEditIcon.click();
     
     const editInput = page.locator('input.edit-input');
     await editInput.fill('カスタムラベルテスト');
@@ -179,6 +203,9 @@ test.describe('チェックリストの編集機能', () => {
     
     // 編集されたテキストが表示されることを確認
     await expect(page.locator('text=カスタムラベルテスト')).toBeVisible();
+    
+    // 編集モードを終了
+    await page.getByRole('button', { name: '編集完了' }).click();
     
     // 項目をチェック
     await page.locator('.checkbox-button').first().click();
