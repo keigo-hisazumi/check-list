@@ -630,7 +630,7 @@ defineExpose({
   -webkit-user-select: text;
   -moz-user-select: text;
   line-height: 1.2;
-  height: 1.32em; /* 1.1em * 1.2 line-height */
+  height: calc(1.1em * 1.2);
 }
 
 .save-button,
@@ -679,7 +679,7 @@ defineExpose({
   
   .edit-input {
     font-size: 1em;
-    height: 1.2em;
+    height: calc(1em * 1.2);
   }
 }
 </style>
