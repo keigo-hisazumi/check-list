@@ -7,7 +7,7 @@ export interface NavItem {
 
 // Props定義
 interface Props {
-  activeItem?: string
+  activeItem: string  // 必須プロパティ：現在アクティブなチェックリストのID
   navItems: NavItem[]
 }
 
@@ -18,9 +18,7 @@ interface Emits {
   (e: 'delete-checklist', id: string): void
 }
 
-const props = withDefaults(defineProps<Props>(), {
-  activeItem: ''
-})
+const props = defineProps<Props>()
 
 const emit = defineEmits<Emits>()
 
