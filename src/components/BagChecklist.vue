@@ -761,8 +761,9 @@ defineExpose({
 
 .add-item-button {
   width: 100%;
-  padding: 15px;
-  margin-top: 10px;
+  padding: 10px;
+  margin-top: 4px;
+  margin-bottom: 6px;
   border: 2px dashed #667eea;
   background: #f8f9fa;
   border-radius: 10px;
@@ -774,6 +775,8 @@ defineExpose({
   align-items: center;
   justify-content: center;
   gap: 8px;
+  min-height: 46px;
+  box-sizing: border-box;
 }
 
 .add-item-button:hover {
