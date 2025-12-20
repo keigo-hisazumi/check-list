@@ -67,8 +67,34 @@ const dragItemIndex = ref<number>(-1)
 const LONG_PRESS_DURATION = 500 // 長押し判定時間（ミリ秒）
 const itemRefs = ref<(HTMLElement | null)[]>([]) // 各アイテムのDOM要素参照
 
+// ユーザーが追加したカスタムアイテムをローカルストレージから読み込む
+const loadCustomItems = (): ChecklistItem[] => {
+  const savedCustomItems = localStorage.getItem('bag-checklist-custom-items')
+  if (savedCustomItems) {
+    try {
+      return JSON.parse(savedCustomItems)
+    } catch (e) {
+      console.error('Failed to load custom items:', e)
+      return []
+    }
+  }
+  return []
+}
+
+// カスタムアイテムをローカルストレージに保存
+const saveCustomItems = (customItems: ChecklistItem[]) => {
+  localStorage.setItem('bag-checklist-custom-items', JSON.stringify(customItems))
+}
+
+// すべてのアイテム（初期アイテム + カスタムアイテム）を取得
+const getAllItems = (): ChecklistItem[] => {
+  const customItems = loadCustomItems()
+  return [...initialChecklistItems, ...customItems]
+}
+
 // ローカルストレージから並び順を読み込む
 const loadItemOrder = () => {
+  const allItems = getAllItems()
   const savedOrder = localStorage.getItem('bag-checklist-order')
   if (savedOrder) {
     try {
@@ -76,13 +102,13 @@ const loadItemOrder = () => {
       // 保存された順序に従ってアイテムを並べ替え
       const orderedItems: ChecklistItem[] = []
       orderIds.forEach(id => {
-        const item = initialChecklistItems.find(item => item.id === id)
+        const item = allItems.find(item => item.id === id)
         if (item) {
           orderedItems.push(item)
         }
       })
       // 新しく追加されたアイテムがある場合は末尾に追加
-      initialChecklistItems.forEach(item => {
+      allItems.forEach(item => {
         if (!orderIds.includes(item.id)) {
           orderedItems.push(item)
         }
@@ -90,11 +116,11 @@ const loadItemOrder = () => {
       checklistItems.value = orderedItems
     } catch (e) {
       console.error('Failed to load item order:', e)
-      checklistItems.value = [...initialChecklistItems]
+      checklistItems.value = allItems
     }
   } else {
-    // 保存された順序がない場合は初期順序を使用
-    checklistItems.value = [...initialChecklistItems]
+    // 保存された順序がない場合は全アイテムを使用
+    checklistItems.value = allItems
   }
 }
 
@@ -186,6 +212,78 @@ const saveEdit = (id: string) => {
   }
   editingItemId.value = null
   editingText.value = ''
+}
+
+// 新しいアイテムを追加
+const addNewItem = async () => {
+  // 新しいアイテムのIDを生成（タイムスタンプベース）
+  const newId = `bag-custom-${Date.now()}`
+  const newItem: ChecklistItem = {
+    id: newId,
+    label: '新しい項目'
+  }
+  
+  // アイテムリストに追加
+  checklistItems.value.push(newItem)
+  
+  // カスタムアイテムとして保存
+  const customItems = loadCustomItems()
+  customItems.push(newItem)
+  saveCustomItems(customItems)
+  
+  // 並び順を保存
+  saveItemOrder()
+  
+  // 自動的に編集モードに入る
+  await nextTick()
+  await startEdit(newId)
+}
+
+// アイテムを削除
+const deleteItem = (id: string) => {
+  // 初期アイテムかどうかをチェック
+  const isInitialItem = initialChecklistItems.some(item => item.id === id)
+  
+  if (isInitialItem) {
+    // 初期アイテムの場合は確認ダイアログを表示
+    if (!confirm('初期項目を削除しますか？\n（削除しても初期項目は再読み込み時に復元できます）')) {
+      return
+    }
+  } else {
+    // カスタムアイテムの場合も確認
+    if (!confirm('この項目を削除しますか？')) {
+      return
+    }
+  }
+  
+  // アイテムリストから削除
+  checklistItems.value = checklistItems.value.filter(item => item.id !== id)
+  
+  // カスタムアイテムの場合はローカルストレージからも削除
+  if (!isInitialItem) {
+    const customItems = loadCustomItems()
+    const updatedCustomItems = customItems.filter(item => item.id !== id)
+    saveCustomItems(updatedCustomItems)
+  }
+  
+  // チェック状態を削除
+  if (checkedItems.value[id]) {
+    const newCheckedItems = { ...checkedItems.value }
+    delete newCheckedItems[id]
+    checkedItems.value = newCheckedItems
+    localStorage.removeItem(id)
+  }
+  
+  // カスタムラベルを削除
+  if (customLabels.value[id]) {
+    const newCustomLabels = { ...customLabels.value }
+    delete newCustomLabels[id]
+    customLabels.value = newCustomLabels
+    localStorage.removeItem(`${id}-label`)
+  }
+  
+  // 並び順を保存
+  saveItemOrder()
 }
 
 // 表示用のラベルを取得
@@ -429,16 +527,26 @@ defineExpose({
             <path d="M382-240 154-468l57-57 171 171 367-367 57 57-424 424Z"/>
           </svg>
         </button>
-        <button
-          v-if="editingItemId !== item.id && isEditMode"
-          class="edit-icon-button"
-          @click.stop="startEdit(item.id)"
-          title="この項目を編集"
-        >
-          <svg xmlns="http://www.w3.org/2000/svg" height="24" viewBox="0 -960 960 960" width="24" fill="currentColor">
-            <path d="M200-200h57l391-391-57-57-391 391v57Zm-80 80v-170l528-527q12-11 26.5-17t30.5-6q16 0 31 6t26 18l55 56q12 11 17.5 26t5.5 30q0 16-5.5 30.5T817-647L290-120H120Zm640-584-56-56 56 56Zm-141 85-28-29 57 57-29-28Z"/>
-          </svg>
-        </button>
+        <div v-if="editingItemId !== item.id && isEditMode" class="edit-actions">
+          <button
+            class="edit-icon-button"
+            @click.stop="startEdit(item.id)"
+            title="この項目を編集"
+          >
+            <svg xmlns="http://www.w3.org/2000/svg" height="24" viewBox="0 -960 960 960" width="24" fill="currentColor">
+              <path d="M200-200h57l391-391-57-57-391 391v57Zm-80 80v-170l528-527q12-11 26.5-17t30.5-6q16 0 31 6t26 18l55 56q12 11 17.5 26t5.5 30q0 16-5.5 30.5T817-647L290-120H120Zm640-584-56-56 56 56Zm-141 85-28-29 57 57-29-28Z"/>
+            </svg>
+          </button>
+          <button
+            class="delete-icon-button"
+            @click.stop="deleteItem(item.id)"
+            title="この項目を削除"
+          >
+            <svg xmlns="http://www.w3.org/2000/svg" height="24" viewBox="0 -960 960 960" width="24" fill="currentColor">
+              <path d="M280-120q-33 0-56.5-23.5T200-200v-520h-40v-80h200v-40h240v40h200v80h-40v520q0 33-23.5 56.5T680-120H280Zm400-600H280v520h400v-520ZM360-280h80v-360h-80v360Zm160 0h80v-360h-80v360ZM280-720v520-520Z"/>
+            </svg>
+          </button>
+        </div>
         
         <div v-if="editingItemId === item.id" class="edit-mode">
           <input
@@ -467,6 +575,16 @@ defineExpose({
         </div>
       </li>
     </ul>
+    <button
+      v-if="isEditMode"
+      class="add-item-button"
+      @click="addNewItem"
+    >
+      <svg xmlns="http://www.w3.org/2000/svg" height="24" viewBox="0 -960 960 960" width="24" fill="currentColor">
+        <path d="M440-440H200v-80h240v-240h80v240h240v80H520v240h-80v-240Z"/>
+      </svg>
+      <span>新しい項目を追加</span>
+    </button>
   </div>
 </template>
 
@@ -594,7 +712,6 @@ defineExpose({
   border: none;
   cursor: pointer;
   padding: 0;
-  margin-left: 15px;
   display: flex;
   align-items: center;
   justify-content: center;
@@ -609,6 +726,62 @@ defineExpose({
 }
 
 .edit-icon-button svg {
+  width: 24px;
+  height: 24px;
+}
+
+.edit-actions {
+  display: flex;
+  gap: 8px;
+  margin-left: 15px;
+}
+
+.delete-icon-button {
+  background: none;
+  border: none;
+  cursor: pointer;
+  padding: 0;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  color: #dc3545;
+  transition: transform 0.2s ease;
+  min-width: 24px;
+  min-height: 24px;
+}
+
+.delete-icon-button:hover {
+  transform: scale(1.1);
+}
+
+.delete-icon-button svg {
+  width: 24px;
+  height: 24px;
+}
+
+.add-item-button {
+  width: 100%;
+  padding: 15px;
+  margin-top: 10px;
+  border: 2px dashed #667eea;
+  background: #f8f9fa;
+  border-radius: 10px;
+  font-size: 1.1em;
+  color: #667eea;
+  cursor: pointer;
+  transition: all 0.3s ease;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 8px;
+}
+
+.add-item-button:hover {
+  background: #e7f0ff;
+  border-color: #5568d3;
+}
+
+.add-item-button svg {
   width: 24px;
   height: 24px;
 }
