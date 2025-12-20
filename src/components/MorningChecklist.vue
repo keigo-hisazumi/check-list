@@ -198,19 +198,56 @@ const startEdit = async (id: string) => {
 
 // 編集をキャンセル
 const cancelEdit = () => {
+  const currentId = editingItemId.value
   editingItemId.value = null
   editingText.value = ''
+  
+  // 編集中のアイテムが空のラベルを持つ新規アイテムの場合は削除
+  if (currentId) {
+    const item = checklistItems.value.find(item => item.id === currentId)
+    if (item && item.label === '' && !customLabels.value[currentId]) {
+      // 新規追加途中でキャンセルされたアイテムを削除
+      checklistItems.value = checklistItems.value.filter(item => item.id !== currentId)
+    }
+  }
 }
 
 // 編集を保存
 const saveEdit = (id: string) => {
   const trimmedText = editingText.value.trim()
   if (trimmedText) {
+    // テキストがある場合は保存
     customLabels.value = {
       ...customLabels.value,
       [id]: trimmedText
     }
     localStorage.setItem(`${id}-label`, trimmedText)
+    
+    // 新規アイテムの場合はカスタムアイテムとして永続化
+    const item = checklistItems.value.find(item => item.id === id)
+    if (item && item.label === '') {
+      // 新規アイテムをカスタムアイテムとして保存
+      const customItems = loadCustomItems()
+      const newItem: ChecklistItem = {
+        id: id,
+        label: trimmedText
+      }
+      customItems.push(newItem)
+      saveCustomItems(customItems)
+      
+      // アイテムのラベルを更新
+      item.label = trimmedText
+      
+      // 並び順を保存
+      saveItemOrder()
+    }
+  } else {
+    // テキストが空の場合
+    const item = checklistItems.value.find(item => item.id === id)
+    if (item && item.label === '') {
+      // 新規追加途中で空のまま保存しようとした場合は削除
+      checklistItems.value = checklistItems.value.filter(item => item.id !== id)
+    }
   }
   editingItemId.value = null
   editingText.value = ''
@@ -222,19 +259,11 @@ const addNewItem = async () => {
   const newId = `morning-custom-${Date.now()}`
   const newItem: ChecklistItem = {
     id: newId,
-    label: '新しい項目'
+    label: ''
   }
   
-  // アイテムリストに追加
+  // アイテムリストに追加（一時的）
   checklistItems.value.push(newItem)
-  
-  // カスタムアイテムとして保存
-  const customItems = loadCustomItems()
-  customItems.push(newItem)
-  saveCustomItems(customItems)
-  
-  // 並び順を保存
-  saveItemOrder()
   
   // 自動的に編集モードに入る
   await nextTick()
@@ -777,7 +806,7 @@ defineExpose({
   align-items: center;
   justify-content: center;
   gap: 8px;
-  min-height: 46px;
+  min-height: 43px;
   box-sizing: border-box;
 }
 
