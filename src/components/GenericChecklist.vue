@@ -3,6 +3,8 @@ import { ref, computed, watch, onMounted, nextTick } from 'vue'
 
 // Props定義
 interface Props {
+  checklistId: string  // チェックリストを識別するID（localStorageのキーに使用）
+  initialItems: ChecklistItem[]  // 初期項目
   isActive?: boolean
 }
 
@@ -23,20 +25,8 @@ interface ChecklistItem {
   label: string
 }
 
-// カバンの中の項目の初期定義
-const initialChecklistItems: ChecklistItem[] = [
-  { id: 'bag-mask', label: 'マスク、手帳、教材' },
-  { id: 'bag-keys', label: 'カギ、イヤホン、社員証' },
-  { id: 'bag-card-case', label: '名刺入れ、クシ、ハンカチ' },
-  { id: 'bag-pen-case', label: '筆箱、充電器、財布、(日傘)' },
-  { id: 'bag-pouch', label: 'ポーチ類、(化粧ポーチ)' },
-  { id: 'bag-lunch', label: '弁当、カトラリー' },
-  { id: 'bag-toothbrush', label: '(歯ブラシ)' },
-  { id: 'bag-bottle', label: '水筒' },
-]
-
 // 並べ替え可能な項目リスト
-const checklistItems = ref<ChecklistItem[]>([...initialChecklistItems])
+const checklistItems = ref<ChecklistItem[]>([...props.initialItems])
 
 // チェック状態の管理
 const checkedItems = ref<Record<string, boolean>>({})
@@ -69,7 +59,7 @@ const itemRefs = ref<(HTMLElement | null)[]>([]) // 各アイテムのDOM要素�
 
 // ユーザーが追加したカスタムアイテムをローカルストレージから読み込む
 const loadCustomItems = (): ChecklistItem[] => {
-  const savedCustomItems = localStorage.getItem('bag-checklist-custom-items')
+  const savedCustomItems = localStorage.getItem(`${props.checklistId}-custom-items`)
   if (savedCustomItems) {
     try {
       return JSON.parse(savedCustomItems)
@@ -83,19 +73,19 @@ const loadCustomItems = (): ChecklistItem[] => {
 
 // カスタムアイテムをローカルストレージに保存
 const saveCustomItems = (customItems: ChecklistItem[]) => {
-  localStorage.setItem('bag-checklist-custom-items', JSON.stringify(customItems))
+  localStorage.setItem(`${props.checklistId}-custom-items`, JSON.stringify(customItems))
 }
 
 // すべてのアイテム（初期アイテム + カスタムアイテム）を取得
 const getAllItems = (): ChecklistItem[] => {
   const customItems = loadCustomItems()
-  return [...initialChecklistItems, ...customItems]
+  return [...props.initialItems, ...customItems]
 }
 
 // ローカルストレージから並び順を読み込む
 const loadItemOrder = () => {
   const allItems = getAllItems()
-  const savedOrder = localStorage.getItem('bag-checklist-order')
+  const savedOrder = localStorage.getItem(`${props.checklistId}-order`)
   if (savedOrder) {
     try {
       const orderIds: string[] = JSON.parse(savedOrder)
@@ -127,14 +117,14 @@ const loadItemOrder = () => {
 // 並び順をローカルストレージに保存
 const saveItemOrder = () => {
   const orderIds = checklistItems.value.map(item => item.id)
-  localStorage.setItem('bag-checklist-order', JSON.stringify(orderIds))
+  localStorage.setItem(`${props.checklistId}-order`, JSON.stringify(orderIds))
 }
 
 // ローカルストレージからチェック状態を読み込む
 const loadCheckedState = () => {
   const saved: Record<string, boolean> = {}
   checklistItems.value.forEach(item => {
-    const value = localStorage.getItem(item.id)
+    const value = localStorage.getItem(`${props.checklistId}-${item.id}`)
     saved[item.id] = value === 'true'
   })
   checkedItems.value = saved
@@ -144,7 +134,7 @@ const loadCheckedState = () => {
 const loadCustomLabels = () => {
   const saved: Record<string, string> = {}
   checklistItems.value.forEach(item => {
-    const value = localStorage.getItem(`${item.id}-label`)
+    const value = localStorage.getItem(`${props.checklistId}-${item.id}-label`)
     if (value) {
       saved[item.id] = value
     }
@@ -164,7 +154,7 @@ watch(
   checkedItems,
   (newValue) => {
     Object.entries(newValue).forEach(([id, checked]) => {
-      localStorage.setItem(id, String(checked))
+      localStorage.setItem(`${props.checklistId}-${id}`, String(checked))
     })
   },
   { deep: true }
@@ -219,7 +209,7 @@ const saveEdit = (id: string) => {
       ...customLabels.value,
       [id]: trimmedText
     }
-    localStorage.setItem(`${id}-label`, trimmedText)
+    localStorage.setItem(`${props.checklistId}-${id}-label`, trimmedText)
     
     // 新規アイテムの場合はカスタムアイテムとして永続化
     const item = checklistItems.value.find(item => item.id === id)
@@ -254,7 +244,7 @@ const saveEdit = (id: string) => {
 // 新しいアイテムを追加
 const addNewItem = async () => {
   // 新しいアイテムのIDを生成（タイムスタンプベース）
-  const newId = `bag-custom-${Date.now()}`
+  const newId = `${props.checklistId}-custom-${Date.now()}`
   const newItem: ChecklistItem = {
     id: newId,
     label: ''
@@ -271,7 +261,7 @@ const addNewItem = async () => {
 // アイテムを削除
 const deleteItem = (id: string) => {
   // 初期アイテムかどうかをチェック
-  const isInitialItem = initialChecklistItems.some(item => item.id === id)
+  const isInitialItem = props.initialItems.some(item => item.id === id)
   
   if (isInitialItem) {
     // 初期アイテムの場合は確認ダイアログを表示
@@ -300,7 +290,7 @@ const deleteItem = (id: string) => {
     const newCheckedItems = { ...checkedItems.value }
     delete newCheckedItems[id]
     checkedItems.value = newCheckedItems
-    localStorage.removeItem(id)
+    localStorage.removeItem(`${props.checklistId}-${id}`)
   }
   
   // カスタムラベルを削除
@@ -308,7 +298,7 @@ const deleteItem = (id: string) => {
     const newCustomLabels = { ...customLabels.value }
     delete newCustomLabels[id]
     customLabels.value = newCustomLabels
-    localStorage.removeItem(`${id}-label`)
+    localStorage.removeItem(`${props.checklistId}-${id}-label`)
   }
   
   // 並び順を保存
@@ -478,7 +468,7 @@ const handleReset = () => {
   const resetState: Record<string, boolean> = {}
   checklistItems.value.forEach(item => {
     resetState[item.id] = false
-    localStorage.removeItem(item.id)
+    localStorage.removeItem(`${props.checklistId}-${item.id}`)
   })
   checkedItems.value = resetState
 }

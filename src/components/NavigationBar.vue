@@ -1,28 +1,25 @@
 <script setup lang="ts">
 // ナビゲーション項目の型定義
-interface NavItem {
+export interface NavItem {
   id: string
   label: string
 }
 
-// ナビゲーション項目の定義
-const navItems: NavItem[] = [
-  { id: 'morning', label: '朝やること' },
-  { id: 'bag', label: 'カバンの中' },
-]
-
 // Props定義
 interface Props {
-  activeItem?: string
+  activeItem: string  // 必須プロパティ：現在アクティブなチェックリストのID
+  navItems: NavItem[]
+  isEditMode?: boolean  // 編集モードかどうか
 }
 
 // Emits定義
 interface Emits {
   (e: 'nav-change', id: string): void
+  (e: 'add-checklist'): void
 }
 
 const props = withDefaults(defineProps<Props>(), {
-  activeItem: 'morning'
+  isEditMode: false
 })
 
 const emit = defineEmits<Emits>()
@@ -31,11 +28,16 @@ const emit = defineEmits<Emits>()
 const handleNavClick = (id: string) => {
   emit('nav-change', id)
 }
+
+// チェックリスト追加ハンドラー
+const handleAddChecklist = () => {
+  emit('add-checklist')
+}
 </script>
 
 <template>
   <nav class="navigation-bar">
-    <div class="nav-container">
+    <div class="nav-scroll-container">
       <button
         v-for="item in navItems"
         :key="item.id"
@@ -43,6 +45,13 @@ const handleNavClick = (id: string) => {
         @click="handleNavClick(item.id)"
       >
         <span class="nav-label">{{ item.label }}</span>
+      </button>
+      <button
+        class="add-button"
+        @click="handleAddChecklist"
+        title="新しいチェックリストを追加"
+      >
+        ＋
       </button>
     </div>
   </nav>
@@ -61,29 +70,39 @@ const handleNavClick = (id: string) => {
   -webkit-backdrop-filter: blur(10px);
   backdrop-filter: blur(10px);
   /* ナビゲーションバーの高さをCSS変数として定義 */
-  --nav-bar-height: calc(8px + env(safe-area-inset-top) + 12px + 14px + 12px + 8px);
+  /* 計算: top padding (6px) + safe area + content top padding (10px) + font height (14px) + content bottom padding (10px) + bottom padding (6px) = 45px */
+  --nav-bar-height: calc(6px + env(safe-area-inset-top) + 10px + 14px + 10px + 6px);
 }
 
-.nav-container {
+.nav-scroll-container {
   display: flex;
-  justify-content: space-around;
   align-items: center;
-  padding: calc(8px + env(safe-area-inset-top)) 0 8px;
+  padding: calc(6px + env(safe-area-inset-top)) 8px 6px;
+  overflow-x: auto;
+  gap: 8px;
+  /* スクロールバーを非表示にする */
+  scrollbar-width: none; /* Firefox */
+  -ms-overflow-style: none; /* IE and Edge */
+}
+
+.nav-scroll-container::-webkit-scrollbar {
+  display: none; /* Chrome, Safari, Opera */
 }
 
 .nav-item {
+  position: relative;
   display: flex;
   flex-direction: column;
   align-items: center;
-  padding: 12px 16px;
+  padding: 10px 16px;
   background: none;
   border: none;
   cursor: pointer;
   transition: all 0.3s ease;
   color: #6c757d;
   border-radius: 10px;
-  flex: 1;
-  max-width: 120px;
+  flex-shrink: 0;
+  min-width: 100px;
   /* 文字選択を無効化 */
   user-select: none;
   -webkit-user-select: none;
@@ -101,24 +120,61 @@ const handleNavClick = (id: string) => {
   font-size: 14px;
   font-weight: 500;
   line-height: 1;
+  margin-bottom: 0;
+}
+
+.add-button {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 2px 12px;
+  background: none;
+  border: none;
+  border-radius: 10px;
+  color: #667eea;
+  cursor: pointer;
+  transition: all 0.3s ease;
+  flex-shrink: 0;
+  min-width: 60px;
+  font-size: 20px;
+  font-weight: bold;
+  /* 文字選択を無効化 */
+  user-select: none;
+  -webkit-user-select: none;
+  -moz-user-select: none;
+  /* 押下時のハイライトを無効化 */
+  -webkit-tap-highlight-color: transparent;
+}
+
+.add-button:hover {
+  background: #f0f3ff;
+  transform: scale(1.05);
 }
 
 @media (max-width: 600px) {
   .navigation-bar {
     /* スマートフォン用のナビゲーションバーの高さ */
-    --nav-bar-height: calc(6px + env(safe-area-inset-top) + 10px + 13px + 10px + 6px);
+    /* 計算: top padding (6px) + safe area + content top padding (8px) + font height (13px) + content bottom padding (8px) + bottom padding (6px) = 41px */
+    --nav-bar-height: calc(6px + env(safe-area-inset-top) + 8px + 13px + 8px + 6px);
   }
 
-  .nav-container {
-    padding: calc(6px + env(safe-area-inset-top)) 0 6px;
+  .nav-scroll-container {
+    padding: calc(6px + env(safe-area-inset-top)) 6px 6px;
+    gap: 6px;
   }
 
   .nav-item {
-    padding: 10px 12px;
+    padding: 8px 12px;
+    min-width: 90px;
   }
 
   .nav-label {
     font-size: 13px;
+  }
+  
+  .add-button {
+    padding: 2px 12px;
+    min-width: 50px;
   }
 }
 </style>
