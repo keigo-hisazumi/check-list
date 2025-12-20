@@ -544,7 +544,7 @@ defineExpose({
         <label 
           v-if="editingItemId !== item.id"
           :for="item.id" 
-          @click.prevent="handleCheckChange(item.id)"
+          @click.prevent="!isEditMode && handleCheckChange(item.id)"
         >
           {{ getDisplayLabel(item) }}
         </label>
