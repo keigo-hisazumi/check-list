@@ -64,7 +64,7 @@ const dragOffsetY = ref<number>(0) // ドラッグ中の要素の視覚的な移
 const longPressTimer = ref<number | null>(null)
 const isDragging = ref<boolean>(false)
 const dragItemIndex = ref<number>(-1)
-const LONG_PRESS_DURATION = 500 // 長押し判定時間（ミリ秒）
+const LONG_PRESS_DURATION = 0 // 長押し判定時間（ミリ秒）- タッチの瞬間から並べ替え可能
 const itemRefs = ref<(HTMLElement | null)[]>([]) // 各アイテムのDOM要素参照
 
 // ユーザーが追加したカスタムアイテムをローカルストレージから読み込む
@@ -542,7 +542,7 @@ defineExpose({
         <label 
           v-if="editingItemId !== item.id"
           :for="item.id" 
-          @click.prevent="isEditMode ? startEdit(item.id) : handleCheckChange(item.id)"
+          @click.prevent="handleCheckChange(item.id)"
         >
           {{ getDisplayLabel(item) }}
         </label>
