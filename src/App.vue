@@ -365,7 +365,6 @@ const handleTouchEnd = () => {
       @add-checklist="handleAddChecklist"
       @delete-checklist="handleDeleteChecklist"
     />
-    />
     <div class="view-container">
       <div
         class="view-slider"
