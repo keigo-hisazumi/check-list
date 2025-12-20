@@ -360,9 +360,11 @@ const handleTouchEnd = () => {
     <NavigationBar
       :active-item="activeView"
       :nav-items="navItems"
+      :is-edit-mode="isEditMode"
       @nav-change="handleNavChangeWithEditReset"
       @add-checklist="handleAddChecklist"
       @delete-checklist="handleDeleteChecklist"
+    />
     />
     <div class="view-container">
       <div

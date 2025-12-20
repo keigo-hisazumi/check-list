@@ -9,6 +9,7 @@ export interface NavItem {
 interface Props {
   activeItem: string  // 必須プロパティ：現在アクティブなチェックリストのID
   navItems: NavItem[]
+  isEditMode?: boolean  // 編集モードかどうか
 }
 
 // Emits定義
@@ -18,7 +19,9 @@ interface Emits {
   (e: 'delete-checklist', id: string): void
 }
 
-const props = defineProps<Props>()
+const props = withDefaults(defineProps<Props>(), {
+  isEditMode: false
+})
 
 const emit = defineEmits<Emits>()
 
@@ -49,7 +52,7 @@ const handleDeleteChecklist = (id: string) => {
       >
         <span class="nav-label">{{ item.label }}</span>
         <button
-          v-if="navItems.length > 1"
+          v-if="navItems.length > 1 && props.isEditMode"
           class="delete-button"
           @click.stop="handleDeleteChecklist(item.id)"
           title="このチェックリストを削除"
@@ -171,8 +174,8 @@ const handleDeleteChecklist = (id: string) => {
   align-items: center;
   justify-content: center;
   padding: 12px 16px;
-  background: #f0f3ff;
-  border: 2px dashed #667eea;
+  background: none;
+  border: none;
   border-radius: 10px;
   color: #667eea;
   cursor: pointer;
@@ -190,8 +193,7 @@ const handleDeleteChecklist = (id: string) => {
 }
 
 .add-button:hover {
-  background: #e0e7ff;
-  border-color: #5568d3;
+  background: #f0f3ff;
   transform: scale(1.05);
 }
 
