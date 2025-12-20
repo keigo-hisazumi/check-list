@@ -368,6 +368,12 @@ const handleTouchEnd = () => {
   font-size: 1.1em;
   cursor: pointer;
   transition: all 0.3s ease;
+  /* 文字選択を無効化 */
+  user-select: none;
+  -webkit-user-select: none;
+  -moz-user-select: none;
+  /* 押下時のハイライトを無効化 */
+  -webkit-tap-highlight-color: transparent;
 }
 
 .edit-button {
