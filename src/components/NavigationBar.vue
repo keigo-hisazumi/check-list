@@ -70,6 +70,7 @@ const handleAddChecklist = () => {
   -webkit-backdrop-filter: blur(10px);
   backdrop-filter: blur(10px);
   /* ナビゲーションバーの高さをCSS変数として定義 */
+  /* 計算: top padding (6px) + safe area + content top padding (10px) + font height (14px) + content bottom padding (10px) + bottom padding (6px) = 45px */
   --nav-bar-height: calc(6px + env(safe-area-inset-top) + 10px + 14px + 10px + 6px);
 }
 
@@ -119,7 +120,7 @@ const handleAddChecklist = () => {
   font-size: 14px;
   font-weight: 500;
   line-height: 1;
-  margin-bottom: 0px;
+  margin-bottom: 0;
 }
 
 .add-button {
@@ -153,6 +154,7 @@ const handleAddChecklist = () => {
 @media (max-width: 600px) {
   .navigation-bar {
     /* スマートフォン用のナビゲーションバーの高さ */
+    /* 計算: top padding (6px) + safe area + content top padding (8px) + font height (13px) + content bottom padding (8px) + bottom padding (6px) = 41px */
     --nav-bar-height: calc(6px + env(safe-area-inset-top) + 8px + 13px + 8px + 6px);
   }
 
