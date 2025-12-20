@@ -55,6 +55,27 @@ const handleEdit = () => {
   }
 }
 
+// 長押しで編集モードに入り、指定された項目の編集を開始
+const handleLongPressEdit = (itemId: string) => {
+  // 編集モードを有効化
+  if (!isEditMode.value) {
+    isEditMode.value = true
+    if (activeView.value === 'morning' && morningChecklistRef.value) {
+      morningChecklistRef.value.enableEditMode()
+      // 次のティックで項目の編集を開始
+      setTimeout(() => {
+        morningChecklistRef.value?.startEditItem(itemId)
+      }, 0)
+    } else if (activeView.value === 'bag' && bagChecklistRef.value) {
+      bagChecklistRef.value.enableEditMode()
+      // 次のティックで項目の編集を開始
+      setTimeout(() => {
+        bagChecklistRef.value?.startEditItem(itemId)
+      }, 0)
+    }
+  }
+}
+
 // ビュー切り替え時に編集モードをリセット
 const handleNavChangeWithEditReset = (viewId: string) => {
   // 編集モードをオフにする
@@ -102,6 +123,9 @@ const transitionDuration = 300 // トランジション時間（ミリ秒）
 
 // タッチ開始イベント
 const handleTouchStart = (e: TouchEvent) => {
+  // 編集モード中は横スワイプを無効化
+  if (isEditMode.value) return
+  
   if (e.touches.length > 0) {
     touchStartX.value = e.touches[0].clientX
     touchStartY.value = e.touches[0].clientY
@@ -130,6 +154,9 @@ const determineSwipeDirection = (diffX: number, diffY: number, threshold: number
 
 // タッチ移動イベント - リアルタイムでスライド
 const handleTouchMove = (e: TouchEvent) => {
+  // 編集モード中は横スワイプを無効化
+  if (isEditMode.value) return
+  
   if (!isSwiping.value || e.touches.length === 0) return
 
   touchCurrentX.value = e.touches[0].clientX
@@ -175,6 +202,12 @@ const resetSwipeState = () => {
 
 // タッチ終了イベント
 const handleTouchEnd = () => {
+  // 編集モード中は横スワイプを無効化
+  if (isEditMode.value) {
+    isSwiping.value = false
+    return
+  }
+  
   if (!isSwiping.value) return
 
   // 縦スクロールの場合は、スワイプ処理をスキップ
@@ -235,6 +268,7 @@ const handleTouchEnd = () => {
             key="morning"
             :is-active="activeView === 'morning'"
             @update:stats="handleStatsUpdate"
+            @long-press-edit="handleLongPressEdit"
           />
         </div>
         <div class="view-wrapper">
@@ -243,6 +277,7 @@ const handleTouchEnd = () => {
             key="bag"
             :is-active="activeView === 'bag'"
             @update:stats="handleStatsUpdate"
+            @long-press-edit="handleLongPressEdit"
           />
         </div>
       </div>
