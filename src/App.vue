@@ -1,15 +1,63 @@
 <script setup lang="ts">
-import { ref, computed } from 'vue'
-import NavigationBar from './components/NavigationBar.vue'
-import MorningChecklist from './components/MorningChecklist.vue'
-import BagChecklist from './components/BagChecklist.vue'
+import { ref, computed, onMounted, watch } from 'vue'
+import NavigationBar, { type NavItem } from './components/NavigationBar.vue'
+import GenericChecklist from './components/GenericChecklist.vue'
+
+// チェックリスト設定の型定義
+interface ChecklistConfig {
+  id: string
+  label: string
+  initialItems: ChecklistItem[]
+}
+
+// チェックリスト項目の型定義
+interface ChecklistItem {
+  id: string
+  label: string
+}
+
+// デフォルトのチェックリスト設定
+const defaultChecklists: ChecklistConfig[] = [
+  {
+    id: 'morning',
+    label: '朝やること',
+    initialItems: [
+      { id: 'morning-tea-coffee', label: '紅茶、コーヒー' },
+      { id: 'morning-lunch', label: '弁当' },
+      { id: 'morning-breakfast', label: '朝食' },
+      { id: 'morning-medicine', label: 'クスリ' },
+      { id: 'morning-prewash', label: '予洗い' },
+      { id: 'morning-bag', label: 'カバンの中' },
+      { id: 'morning-garbage', label: 'ゴミまとめ' },
+      { id: 'morning-preparation', label: '出発準備' },
+      { id: 'morning-change', label: '着替え' },
+      { id: 'morning-brush', label: '歯みがき' },
+    ]
+  },
+  {
+    id: 'bag',
+    label: 'カバンの中',
+    initialItems: [
+      { id: 'bag-mask', label: 'マスク、手帳、教材' },
+      { id: 'bag-keys', label: 'カギ、イヤホン、社員証' },
+      { id: 'bag-card-case', label: '名刺入れ、クシ、ハンカチ' },
+      { id: 'bag-pen-case', label: '筆箱、充電器、財布、(日傘)' },
+      { id: 'bag-pouch', label: 'ポーチ類、(化粧ポーチ)' },
+      { id: 'bag-lunch', label: '弁当、カトラリー' },
+      { id: 'bag-toothbrush', label: '(歯ブラシ)' },
+      { id: 'bag-bottle', label: '水筒' },
+    ]
+  }
+]
+
+// チェックリストの設定を管理
+const checklists = ref<ChecklistConfig[]>([])
 
 // アクティブなビューの管理
-const activeView = ref<string>('morning')
+const activeView = ref<string>('')
 
-// コンポーネントのrefを管理
-const morningChecklistRef = ref<InstanceType<typeof MorningChecklist> | null>(null)
-const bagChecklistRef = ref<InstanceType<typeof BagChecklist> | null>(null)
+// コンポーネントのrefを管理（動的に生成）
+const checklistRefs = ref<Record<string, InstanceType<typeof GenericChecklist> | null>>({})
 
 // 統計情報の管理
 const stats = ref<{ completedCount: number; totalCount: number }>({
@@ -20,6 +68,50 @@ const stats = ref<{ completedCount: number; totalCount: number }>({
 // 編集モードの管理
 const isEditMode = ref<boolean>(false)
 
+// ローカルストレージからチェックリスト設定を読み込む
+const loadChecklists = () => {
+  const saved = localStorage.getItem('checklists-config')
+  if (saved) {
+    try {
+      const parsed = JSON.parse(saved)
+      checklists.value = parsed
+      // アクティブビューを最初のチェックリストに設定
+      if (checklists.value.length > 0) {
+        activeView.value = checklists.value[0].id
+      }
+    } catch (e) {
+      console.error('Failed to load checklists config:', e)
+      checklists.value = [...defaultChecklists]
+      activeView.value = checklists.value[0].id
+    }
+  } else {
+    // 初回起動時はデフォルトを使用
+    checklists.value = [...defaultChecklists]
+    activeView.value = checklists.value[0].id
+    saveChecklists()
+  }
+}
+
+// チェックリスト設定をローカルストレージに保存
+const saveChecklists = () => {
+  localStorage.setItem('checklists-config', JSON.stringify(checklists.value))
+}
+
+// チェックリスト設定が変更されたら保存
+watch(checklists, () => {
+  saveChecklists()
+}, { deep: true })
+
+// コンポーネントマウント時にチェックリストを読み込む
+onMounted(() => {
+  loadChecklists()
+})
+
+// ナビゲーション項目を計算
+const navItems = computed<NavItem[]>(() => 
+  checklists.value.map(c => ({ id: c.id, label: c.label }))
+)
+
 // 統計情報の更新ハンドラー
 const handleStatsUpdate = (newStats: { completedCount: number; totalCount: number }) => {
   stats.value = newStats
@@ -27,10 +119,9 @@ const handleStatsUpdate = (newStats: { completedCount: number; totalCount: numbe
 
 // リセットボタンのハンドラー
 const handleReset = () => {
-  if (activeView.value === 'morning' && morningChecklistRef.value) {
-    morningChecklistRef.value.handleReset()
-  } else if (activeView.value === 'bag' && bagChecklistRef.value) {
-    bagChecklistRef.value.handleReset()
+  const ref = checklistRefs.value[activeView.value]
+  if (ref) {
+    ref.handleReset()
   }
 }
 
@@ -38,19 +129,12 @@ const handleReset = () => {
 const handleEdit = () => {
   isEditMode.value = !isEditMode.value
   
-  if (isEditMode.value) {
-    // 編集モードを有効化
-    if (activeView.value === 'morning' && morningChecklistRef.value) {
-      morningChecklistRef.value.enableEditMode()
-    } else if (activeView.value === 'bag' && bagChecklistRef.value) {
-      bagChecklistRef.value.enableEditMode()
-    }
-  } else {
-    // 編集モードを無効化
-    if (activeView.value === 'morning' && morningChecklistRef.value) {
-      morningChecklistRef.value.disableEditMode()
-    } else if (activeView.value === 'bag' && bagChecklistRef.value) {
-      bagChecklistRef.value.disableEditMode()
+  const ref = checklistRefs.value[activeView.value]
+  if (ref) {
+    if (isEditMode.value) {
+      ref.enableEditMode()
+    } else {
+      ref.disableEditMode()
     }
   }
 }
@@ -59,11 +143,9 @@ const handleEdit = () => {
 const handleNavChangeWithEditReset = (viewId: string) => {
   // 編集モードをオフにする
   if (isEditMode.value) {
-    // 現在のビューの編集モードを無効化
-    if (activeView.value === 'morning' && morningChecklistRef.value) {
-      morningChecklistRef.value.disableEditMode()
-    } else if (activeView.value === 'bag' && bagChecklistRef.value) {
-      bagChecklistRef.value.disableEditMode()
+    const currentRef = checklistRefs.value[activeView.value]
+    if (currentRef) {
+      currentRef.disableEditMode()
     }
     isEditMode.value = false
   }
@@ -72,11 +154,10 @@ const handleNavChangeWithEditReset = (viewId: string) => {
   handleNavChange(viewId)
 }
 
-// ビューのリスト
-const views = ['morning', 'bag']
-
 // 現在のインデックスを計算
-const currentIndex = computed(() => views.indexOf(activeView.value))
+const currentIndex = computed(() => 
+  checklists.value.findIndex(c => c.id === activeView.value)
+)
 
 // ナビゲーション変更ハンドラー
 const handleNavChange = (viewId: string) => {
@@ -84,6 +165,53 @@ const handleNavChange = (viewId: string) => {
   // ナビゲーション変更時はスライドオフセットをリセット
   translateX.value = 0
   isTransitioning.value = false
+}
+
+// チェックリストを追加
+const handleAddChecklist = () => {
+  const name = prompt('新しいチェックリストの名前を入力してください：')
+  if (!name || !name.trim()) return
+  
+  const newId = `checklist-${Date.now()}`
+  const newChecklist: ChecklistConfig = {
+    id: newId,
+    label: name.trim(),
+    initialItems: []
+  }
+  
+  checklists.value.push(newChecklist)
+  // 新しいチェックリストに切り替え
+  activeView.value = newId
+}
+
+// チェックリストを削除
+const handleDeleteChecklist = (id: string) => {
+  if (checklists.value.length <= 1) {
+    alert('最後のチェックリストは削除できません')
+    return
+  }
+  
+  const checklist = checklists.value.find(c => c.id === id)
+  if (!checklist) return
+  
+  if (!confirm(`「${checklist.label}」を削除しますか？\n\n注意: チェックリスト内のすべてのデータが削除されます。`)) {
+    return
+  }
+  
+  // チェックリストを削除
+  const index = checklists.value.findIndex(c => c.id === id)
+  checklists.value.splice(index, 1)
+  
+  // ローカルストレージからチェックリストデータを削除
+  // カスタムアイテム
+  localStorage.removeItem(`${id}-custom-items`)
+  // 並び順
+  localStorage.removeItem(`${id}-order`)
+  
+  // アクティブビューが削除されたチェックリストだった場合、最初のチェックリストに切り替え
+  if (activeView.value === id) {
+    activeView.value = checklists.value[0].id
+  }
 }
 
 // スワイプ機能の実装
@@ -159,11 +287,11 @@ const handleTouchMove = (e: TouchEvent) => {
     // 横スワイプの場合は縦スクロールを防止
     e.preventDefault()
 
-    const currentIndex = views.indexOf(activeView.value)
+    const currentIdx = currentIndex.value
 
     // 端の画面では逆方向のスワイプを制限
-    if ((currentIndex === 0 && diffX > 0) ||
-        (currentIndex === views.length - 1 && diffX < 0)) {
+    if ((currentIdx === 0 && diffX > 0) ||
+        (currentIdx === checklists.value.length - 1 && diffX < 0)) {
       // 端での抵抗感を表現（スワイプ量を減衰）
       translateX.value = diffX * edgeResistance
     } else {
@@ -196,19 +324,19 @@ const handleTouchEnd = () => {
   }
 
   const swipeDistance = touchCurrentX.value - touchStartX.value
-  const currentIndex = views.indexOf(activeView.value)
+  const currentIdx = currentIndex.value
 
   isTransitioning.value = true
 
   // 横スワイプの場合のみ、画面遷移を実行
   if (swipeDirection.value === 'horizontal') {
     // 右スワイプ（前の画面へ）
-    if (swipeDistance > swipeThreshold && currentIndex > 0) {
-      activeView.value = views[currentIndex - 1]
+    if (swipeDistance > swipeThreshold && currentIdx > 0) {
+      activeView.value = checklists.value[currentIdx - 1].id
     }
     // 左スワイプ（次の画面へ）
-    else if (swipeDistance < -swipeThreshold && currentIndex < views.length - 1) {
-      activeView.value = views[currentIndex + 1]
+    else if (swipeDistance < -swipeThreshold && currentIdx < checklists.value.length - 1) {
+      activeView.value = checklists.value[currentIdx + 1].id
     }
   }
 
@@ -231,7 +359,10 @@ const handleTouchEnd = () => {
   >
     <NavigationBar
       :active-item="activeView"
+      :nav-items="navItems"
       @nav-change="handleNavChangeWithEditReset"
+      @add-checklist="handleAddChecklist"
+      @delete-checklist="handleDeleteChecklist"
     />
     <div class="view-container">
       <div
@@ -241,19 +372,16 @@ const handleTouchEnd = () => {
           transition: isTransitioning ? `transform ${transitionDuration}ms ease-out` : 'none'
         }"
       >
-        <div class="view-wrapper">
-          <MorningChecklist
-            ref="morningChecklistRef"
-            key="morning"
-            :is-active="activeView === 'morning'"
-            @update:stats="handleStatsUpdate"
-          />
-        </div>
-        <div class="view-wrapper">
-          <BagChecklist
-            ref="bagChecklistRef"
-            key="bag"
-            :is-active="activeView === 'bag'"
+        <div
+          v-for="checklist in checklists"
+          :key="checklist.id"
+          class="view-wrapper"
+        >
+          <GenericChecklist
+            :ref="el => { checklistRefs[checklist.id] = el as InstanceType<typeof GenericChecklist> | null }"
+            :checklist-id="checklist.id"
+            :initial-items="checklist.initialItems"
+            :is-active="activeView === checklist.id"
             @update:stats="handleStatsUpdate"
           />
         </div>
