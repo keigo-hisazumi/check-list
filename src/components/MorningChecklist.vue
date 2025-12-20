@@ -559,6 +559,7 @@ defineExpose({
   -moz-user-select: none;
   -webkit-touch-callout: none; /* iOS用：長押しメニューを無効化 */
   -webkit-tap-highlight-color: transparent; /* タップ時のハイライトを無効化 */
+  line-height: 1.2;
 }
 
 .checklist-item.editing {
@@ -622,14 +623,16 @@ defineExpose({
 
 .edit-input {
   flex: 1;
-  padding: 8px;
+  padding: 0 8px;
   border: 2px solid #667eea;
   border-radius: 5px;
-  font-size: 1em;
+  font-size: 1.1em;
   outline: none;
   user-select: text; /* 編集時はテキスト選択を許可 */
   -webkit-user-select: text;
   -moz-user-select: text;
+  line-height: 1.2;
+  height: 1.32em; /* 1.1em * 1.2 line-height */
 }
 
 .save-button,
@@ -673,6 +676,12 @@ defineExpose({
 
   .checklist-item label {
     font-size: 1em;
+    line-height: 1.2;
+  }
+  
+  .edit-input {
+    font-size: 1em;
+    height: 1.2em;
   }
 }
 </style>
