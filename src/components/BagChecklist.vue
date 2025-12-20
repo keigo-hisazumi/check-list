@@ -640,13 +640,14 @@ defineExpose({
   border: none;
   cursor: pointer;
   font-size: 1.2em;
-  padding: 0;
+  padding: 0 8px;
   transition: transform 0.2s ease;
   line-height: 1;
   height: 26px;
   display: flex;
   align-items: center;
   justify-content: center;
+  min-width: 32px;
 }
 
 .save-button {
