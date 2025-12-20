@@ -17,6 +17,9 @@ const stats = ref<{ completedCount: number; totalCount: number }>({
   totalCount: 0
 })
 
+// 編集モードの管理
+const isEditMode = ref<boolean>(false)
+
 // 統計情報の更新ハンドラー
 const handleStatsUpdate = (newStats: { completedCount: number; totalCount: number }) => {
   stats.value = newStats
@@ -29,6 +32,44 @@ const handleReset = () => {
   } else if (activeView.value === 'bag' && bagChecklistRef.value) {
     bagChecklistRef.value.handleReset()
   }
+}
+
+// 編集ボタンのハンドラー
+const handleEdit = () => {
+  isEditMode.value = !isEditMode.value
+  
+  if (isEditMode.value) {
+    // 編集モードを有効化
+    if (activeView.value === 'morning' && morningChecklistRef.value) {
+      morningChecklistRef.value.enableEditMode()
+    } else if (activeView.value === 'bag' && bagChecklistRef.value) {
+      bagChecklistRef.value.enableEditMode()
+    }
+  } else {
+    // 編集モードを無効化
+    if (activeView.value === 'morning' && morningChecklistRef.value) {
+      morningChecklistRef.value.disableEditMode()
+    } else if (activeView.value === 'bag' && bagChecklistRef.value) {
+      bagChecklistRef.value.disableEditMode()
+    }
+  }
+}
+
+// ビュー切り替え時に編集モードをリセット
+const handleNavChangeWithEditReset = (viewId: string) => {
+  // 編集モードをオフにする
+  if (isEditMode.value) {
+    // 現在のビューの編集モードを無効化
+    if (activeView.value === 'morning' && morningChecklistRef.value) {
+      morningChecklistRef.value.disableEditMode()
+    } else if (activeView.value === 'bag' && bagChecklistRef.value) {
+      bagChecklistRef.value.disableEditMode()
+    }
+    isEditMode.value = false
+  }
+  
+  // 元のナビゲーション処理を実行
+  handleNavChange(viewId)
 }
 
 // ビューのリスト
@@ -178,7 +219,7 @@ const handleTouchEnd = () => {
   >
     <NavigationBar
       :active-item="activeView"
-      @nav-change="handleNavChange"
+      @nav-change="handleNavChangeWithEditReset"
     />
     <div class="view-container">
       <div
@@ -210,9 +251,18 @@ const handleTouchEnd = () => {
       <div class="progress">
         {{ stats.completedCount }} / {{ stats.totalCount }} 完了
       </div>
-      <button class="reset-button" @click="handleReset">
-        すべてリセット
-      </button>
+      <div class="button-group">
+        <button 
+          class="edit-button"
+          :class="{ active: isEditMode }"
+          @click="handleEdit"
+        >
+          {{ isEditMode ? '編集完了' : '項目を編集' }}
+        </button>
+        <button class="reset-button" @click="handleReset">
+          すべてリセット
+        </button>
+      </div>
     </div>
   </div>
 </template>
@@ -292,16 +342,40 @@ const handleTouchEnd = () => {
   margin-bottom: 10px;
 }
 
+.button-group {
+  display: flex;
+  gap: 10px;
+}
+
+.edit-button,
 .reset-button {
-  width: 100%;
+  flex: 1;
   padding: 15px;
-  background: #667eea;
-  color: white;
   border: none;
   border-radius: 10px;
   font-size: 1.1em;
   cursor: pointer;
-  transition: background 0.3s ease;
+  transition: all 0.3s ease;
+}
+
+.edit-button {
+  background: #f0f0f0;
+  color: #667eea;
+  border: 2px solid #667eea;
+}
+
+.edit-button:hover {
+  background: #e0e0f0;
+}
+
+.edit-button.active {
+  background: #667eea;
+  color: white;
+}
+
+.reset-button {
+  background: #667eea;
+  color: white;
 }
 
 @media (max-width: 600px) {
@@ -309,6 +383,7 @@ const handleTouchEnd = () => {
     padding: 12px 16px calc(12px + env(safe-area-inset-bottom));
   }
 
+  .edit-button,
   .reset-button {
     padding: 12px;
   }
@@ -316,6 +391,10 @@ const handleTouchEnd = () => {
   .progress {
     font-size: 1.1em;
     margin-bottom: 8px;
+  }
+
+  .button-group {
+    gap: 8px;
   }
 }
 </style>
