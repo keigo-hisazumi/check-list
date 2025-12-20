@@ -13,7 +13,6 @@ const props = withDefaults(defineProps<Props>(), {
 // Emits定義
 interface Emits {
   (e: 'update:stats', stats: { completedCount: number; totalCount: number }): void
-  (e: 'long-press-edit', itemId: string): void
 }
 
 const emit = defineEmits<Emits>()
@@ -208,25 +207,20 @@ const handleTouchStart = (e: TouchEvent, itemId: string, index: number) => {
   // 編集中の項目がある場合は長押しを無効化
   if (editingItemId.value !== null) return
   
+  // 編集モードでない場合は長押しを無効化
+  if (!isEditMode.value) return
+  
   if (!e.touches.length) return
   
   dragStartY.value = e.touches[0].clientY
   dragCurrentY.value = e.touches[0].clientY
   dragItemIndex.value = index
   
-  // 編集モードでない場合のみ、長押しで編集モード遷移のタイマーを開始
-  if (!isEditMode.value) {
-    longPressTimer.value = window.setTimeout(() => {
-      // 長押しで編集モードに遷移し、この項目を編集開始
-      emit('long-press-edit', itemId)
-    }, LONG_PRESS_DURATION)
-  } else {
-    // 編集モードの場合は、ドラッグ&ドロップ用のタイマーを開始
-    longPressTimer.value = window.setTimeout(() => {
-      draggingItemId.value = itemId
-      isDragging.value = true
-    }, LONG_PRESS_DURATION)
-  }
+  // 長押し判定タイマーを開始
+  longPressTimer.value = window.setTimeout(() => {
+    draggingItemId.value = itemId
+    isDragging.value = true
+  }, LONG_PRESS_DURATION)
 }
 
 // タッチ移動
@@ -392,17 +386,11 @@ const disableEditMode = () => {
   }
 }
 
-// 項目の編集を開始（外部から呼び出し可能）
-const startEditItem = async (itemId: string) => {
-  await startEdit(itemId)
-}
-
 // リセット機能と編集モード制御を外部に公開
 defineExpose({
   handleReset,
   enableEditMode,
-  disableEditMode,
-  startEditItem
+  disableEditMode
 })
 </script>
 
