@@ -273,8 +273,7 @@ test.describe('チェックリストのアイテム追加・削除機能', () =>
     // チェックボックスをクリック
     await checkboxButton.click();
     
-    // チェックされたことを確認（少し待機してから確認）
-    await page.waitForTimeout(500);
-    await expect(page.locator('.progress')).toContainText('1 / 11 完了');
+    // チェックされたことを確認（進捗表示が更新されるまで待機）
+    await expect(page.locator('.progress')).toContainText('1 / 11 完了', { timeout: 2000 });
   });
 });
