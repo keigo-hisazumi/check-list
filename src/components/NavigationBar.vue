@@ -84,6 +84,12 @@ const handleNavClick = (id: string) => {
   border-radius: 10px;
   flex: 1;
   max-width: 120px;
+  /* 文字選択を無効化 */
+  user-select: none;
+  -webkit-user-select: none;
+  -moz-user-select: none;
+  /* 押下時のハイライトを無効化 */
+  -webkit-tap-highlight-color: transparent;
 }
 
 .nav-item.active {
