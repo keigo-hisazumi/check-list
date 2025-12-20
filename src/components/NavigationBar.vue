@@ -16,7 +16,6 @@ interface Props {
 interface Emits {
   (e: 'nav-change', id: string): void
   (e: 'add-checklist'): void
-  (e: 'delete-checklist', id: string): void
 }
 
 const props = withDefaults(defineProps<Props>(), {
@@ -34,11 +33,6 @@ const handleNavClick = (id: string) => {
 const handleAddChecklist = () => {
   emit('add-checklist')
 }
-
-// チェックリスト削除ハンドラー
-const handleDeleteChecklist = (id: string) => {
-  emit('delete-checklist', id)
-}
 </script>
 
 <template>
@@ -51,14 +45,6 @@ const handleDeleteChecklist = (id: string) => {
         @click="handleNavClick(item.id)"
       >
         <span class="nav-label">{{ item.label }}</span>
-        <button
-          v-if="navItems.length > 1 && props.isEditMode"
-          class="delete-button"
-          @click.stop="handleDeleteChecklist(item.id)"
-          title="このチェックリストを削除"
-        >
-          ✕
-        </button>
       </button>
       <button
         class="add-button"
@@ -134,39 +120,6 @@ const handleDeleteChecklist = (id: string) => {
   font-weight: 500;
   line-height: 1;
   margin-bottom: 4px;
-}
-
-.delete-button {
-  position: absolute;
-  top: 2px;
-  right: 2px;
-  background: rgba(220, 53, 69, 0.1);
-  border: none;
-  border-radius: 50%;
-  width: 20px;
-  height: 20px;
-  font-size: 12px;
-  color: #dc3545;
-  cursor: pointer;
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  opacity: 0.7;
-  transition: all 0.2s ease;
-  padding: 0;
-  line-height: 1;
-  /* 文字選択を無効化 */
-  user-select: none;
-  -webkit-user-select: none;
-  -moz-user-select: none;
-  /* 押下時のハイライトを無効化 */
-  -webkit-tap-highlight-color: transparent;
-}
-
-.delete-button:hover {
-  opacity: 1;
-  background: rgba(220, 53, 69, 0.2);
-  transform: scale(1.1);
 }
 
 .add-button {

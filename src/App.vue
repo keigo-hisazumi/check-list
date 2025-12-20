@@ -167,7 +167,16 @@ const handleNavChange = (viewId: string) => {
   isTransitioning.value = false
 }
 
-// チェックリストを追加
+// リセットまたはリスト削除ボタンのハンドラー
+const handleResetOrDelete = () => {
+  if (isEditMode.value) {
+    // 編集モード時はリストを削除
+    handleDeleteChecklist(activeView.value)
+  } else {
+    // 通常モード時はリセット
+    handleReset()
+  }
+}
 const handleAddChecklist = () => {
   const name = prompt('新しいチェックリストの名前を入力してください：')
   if (!name || !name.trim()) return
@@ -363,7 +372,6 @@ const handleTouchEnd = () => {
       :is-edit-mode="isEditMode"
       @nav-change="handleNavChangeWithEditReset"
       @add-checklist="handleAddChecklist"
-      @delete-checklist="handleDeleteChecklist"
     />
     <div class="view-container">
       <div
@@ -400,8 +408,11 @@ const handleTouchEnd = () => {
         >
           {{ isEditMode ? '編集完了' : '項目を編集' }}
         </button>
-        <button class="reset-button" @click="handleReset">
-          すべてリセット
+        <button 
+          :class="isEditMode ? 'delete-list-button' : 'reset-button'" 
+          @click="handleResetOrDelete"
+        >
+          {{ isEditMode ? 'リストを削除' : 'すべてリセット' }}
         </button>
       </div>
     </div>
@@ -525,13 +536,36 @@ const handleTouchEnd = () => {
   color: white;
 }
 
+.delete-list-button {
+  flex: 1;
+  padding: 15px;
+  border: none;
+  border-radius: 10px;
+  font-size: 1.1em;
+  cursor: pointer;
+  transition: all 0.3s ease;
+  background: #dc3545;
+  color: white;
+  /* 文字選択を無効化 */
+  user-select: none;
+  -webkit-user-select: none;
+  -moz-user-select: none;
+  /* 押下時のハイライトを無効化 */
+  -webkit-tap-highlight-color: transparent;
+}
+
+.delete-list-button:hover {
+  background: #c82333;
+}
+
 @media (max-width: 600px) {
   .bottom-bar {
     padding: 12px 16px calc(12px + env(safe-area-inset-bottom));
   }
 
   .edit-button,
-  .reset-button {
+  .reset-button,
+  .delete-list-button {
     padding: 12px;
   }
 
