@@ -64,7 +64,7 @@ const dragOffsetY = ref<number>(0) // ドラッグ中の要素の視覚的な移
 const longPressTimer = ref<number | null>(null)
 const isDragging = ref<boolean>(false)
 const dragItemIndex = ref<number>(-1)
-const LONG_PRESS_DURATION = 0 // 長押し判定時間（ミリ秒）- タッチの瞬間から並べ替え可能
+const DRAG_START_DELAY = 0 // ドラッグ開始遅延時間（ミリ秒）- タッチの瞬間から並べ替え可能
 const itemRefs = ref<(HTMLElement | null)[]>([]) // 各アイテムのDOM要素参照
 
 // ユーザーが追加したカスタムアイテムをローカルストレージから読み込む
@@ -343,11 +343,11 @@ const handleTouchStart = (e: TouchEvent, itemId: string, index: number) => {
   dragCurrentY.value = e.touches[0].clientY
   dragItemIndex.value = index
   
-  // 長押し判定タイマーを開始
+  // ドラッグ開始タイマーを開始
   longPressTimer.value = window.setTimeout(() => {
     draggingItemId.value = itemId
     isDragging.value = true
-  }, LONG_PRESS_DURATION)
+  }, DRAG_START_DELAY)
 }
 
 // タッチ移動
@@ -355,7 +355,7 @@ const handleTouchMove = (e: TouchEvent) => {
   if (!e.touches.length) return
   
   if (!isDragging.value) {
-    // 長押し前に移動した場合は長押しをキャンセル
+    // ドラッグ開始前に移動した場合はドラッグをキャンセル
     const moveDistance = Math.abs(e.touches[0].clientY - dragStartY.value)
     if (moveDistance > 10 && longPressTimer.value !== null) {
       window.clearTimeout(longPressTimer.value)
@@ -448,7 +448,7 @@ const handleTouchMove = (e: TouchEvent) => {
 
 // タッチ終了
 const handleTouchEnd = () => {
-  // 長押しタイマーをクリア
+  // ドラッグ開始タイマーをクリア
   if (longPressTimer.value !== null) {
     window.clearTimeout(longPressTimer.value)
     longPressTimer.value = null
