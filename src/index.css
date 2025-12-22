@@ -32,18 +32,3 @@ body {
   min-height: 100dvh;
 }
 
-/* 横画面でも縦画面表示を維持（アスペクト比で判定） */
-@media (min-aspect-ratio: 1/1) and (max-height: 600px) {
-  html {
-    transform: rotate(-90deg);
-    transform-origin: left top;
-    width: 100vh;
-    height: 100vw;
-    overflow-x: hidden;
-    overflow-y: auto;
-    position: absolute;
-    top: 100%;
-    left: 0;
-  }
-}
-
