@@ -213,9 +213,11 @@ watch(() => props.activeItem, async () => {
 .edit-name-container {
   display: flex;
   align-items: center;
+  justify-content: center;
   gap: 8px;
   flex: 1;
   max-width: 600px;
+  margin: 0 auto;
 }
 
 .edit-name-input {
@@ -229,6 +231,7 @@ watch(() => props.activeItem, async () => {
   background: white;
   color: #333;
   min-width: 150px;
+  text-align: center;
 }
 
 @media (max-width: 600px) {
