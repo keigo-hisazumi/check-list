@@ -12,35 +12,39 @@ test.describe('画面方向の制御', () => {
     await expect(page.locator('button.reset-button')).toBeVisible();
   });
 
-  test('横画面（ランドスケープ）モードで警告メッセージが表示される', async ({ page }) => {
+  test('横画面（ランドスケープ）モードで縦画面表示が維持される', async ({ page }) => {
     // 横画面サイズに設定（高さ600px以下のランドスケープ）
     await page.setViewportSize({ width: 800, height: 400 });
     await page.goto('/');
     
-    // 警告メッセージが表示されることを確認
-    const warningMessage = await page.locator('body').evaluate((body) => {
-      const beforeContent = window.getComputedStyle(body, '::before').content;
-      return beforeContent.replace(/['"]/g, ''); // クォートを削除
+    // htmlに回転transformが適用されていることを確認
+    const htmlTransform = await page.locator('html').evaluate((html) => {
+      return window.getComputedStyle(html).transform;
     });
     
-    expect(warningMessage).toBe('縦画面でご利用ください');
+    // transformが適用されていることを確認（rotate(-90deg)の場合、行列変換されている）
+    expect(htmlTransform).not.toBe('none');
     
-    // アプリケーションの主要コンテンツが非表示になっていることを確認
-    const appDisplay = await page.locator('#app').evaluate((el) => {
-      return window.getComputedStyle(el).display;
-    });
-    
-    expect(appDisplay).toBe('none');
+    // アプリケーションの主要コンテンツが表示されていることを確認
+    await expect(page.locator('text=朝やること')).toBeVisible();
+    await expect(page.locator('.progress')).toBeVisible();
   });
 
-  test('タブレットサイズの横画面では警告が表示されない', async ({ page }) => {
+  test('タブレットサイズの横画面では回転が適用されない', async ({ page }) => {
     // タブレットサイズの横画面（高さ600pxより大きい）
     await page.setViewportSize({ width: 1024, height: 768 });
     await page.goto('/');
     
-    // アプリケーションが正常に表示されることを確認（警告なし）
+    // アプリケーションが正常に表示されることを確認（回転なし）
     await expect(page.locator('text=朝やること')).toBeVisible();
     await expect(page.locator('.progress')).toBeVisible();
+    
+    // htmlにtransformが適用されていないことを確認
+    const htmlTransform = await page.locator('html').evaluate((html) => {
+      return window.getComputedStyle(html).transform;
+    });
+    
+    expect(htmlTransform).toBe('none');
   });
 
   test('manifest.webmanifestにorientation設定が含まれている', async ({ page }) => {
