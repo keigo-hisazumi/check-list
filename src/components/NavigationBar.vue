@@ -60,9 +60,12 @@ const saveEdit = () => {
   const trimmedText = editingText.value.trim()
   if (trimmedText) {
     emit('update-checklist-name', props.activeItem, trimmedText)
+    isEditing.value = false
+    editingText.value = ''
+  } else {
+    // 空の場合は編集をキャンセル
+    cancelEdit()
   }
-  isEditing.value = false
-  editingText.value = ''
 }
 
 // 編集をキャンセル
@@ -96,12 +99,14 @@ watch(() => props.activeItem, () => {
           v-model="editingText"
           type="text"
           class="edit-name-input"
+          aria-label="チェックリスト名を編集"
           @keyup.enter="saveEdit"
           @keyup.esc="cancelEdit"
           @click.stop
         />
         <button
           class="save-name-button"
+          aria-label="変更を保存"
           @click="saveEdit"
           title="保存"
         >
@@ -109,6 +114,7 @@ watch(() => props.activeItem, () => {
         </button>
         <button
           class="cancel-name-button"
+          aria-label="編集をキャンセル"
           @click="cancelEdit"
           title="キャンセル"
         >
