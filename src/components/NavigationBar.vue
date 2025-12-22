@@ -29,8 +29,6 @@ const emit = defineEmits<Emits>()
 
 // 編集中のテキスト
 const editingText = ref<string>('')
-// 編集中かどうか
-const isEditing = ref<boolean>(false)
 // 入力フィールドへの参照
 const inputRef = ref<HTMLInputElement | null>(null)
 
@@ -44,82 +42,57 @@ const handleAddChecklist = () => {
   emit('add-checklist')
 }
 
-// 編集モード開始
-const startEditingName = async () => {
-  const activeNavItem = props.navItems.find(item => item.id === props.activeItem)
-  if (activeNavItem) {
-    editingText.value = activeNavItem.label
-    isEditing.value = true
-    await nextTick()
-    inputRef.value?.focus()
-  }
-}
-
-// 編集を保存
-const saveEdit = () => {
-  const trimmedText = editingText.value.trim()
-  if (trimmedText) {
-    emit('update-checklist-name', props.activeItem, trimmedText)
-    isEditing.value = false
-    editingText.value = ''
+// 編集モードが変更されたときの処理
+watch(() => props.isEditMode, async (newValue) => {
+  if (newValue) {
+    // 編集モードに入ったら自動的に編集開始
+    const activeNavItem = props.navItems.find(item => item.id === props.activeItem)
+    if (activeNavItem) {
+      editingText.value = activeNavItem.label
+      await nextTick()
+      inputRef.value?.focus()
+    }
   } else {
-    // 空の場合は編集をキャンセル
-    cancelEdit()
-  }
-}
-
-// 編集をキャンセル
-const cancelEdit = () => {
-  isEditing.value = false
-  editingText.value = ''
-}
-
-// 編集モードが変更されたら編集状態をリセット
-watch(() => props.isEditMode, (newValue) => {
-  if (!newValue) {
-    isEditing.value = false
+    // 編集モードを終了するときに変更を保存
+    const trimmedText = editingText.value.trim()
+    if (trimmedText) {
+      const activeNavItem = props.navItems.find(item => item.id === props.activeItem)
+      // 元の名前と異なる場合のみ更新
+      if (activeNavItem && trimmedText !== activeNavItem.label) {
+        emit('update-checklist-name', props.activeItem, trimmedText)
+      }
+    }
     editingText.value = ''
   }
 })
 
-// アクティブアイテムが変更されたら編集状態をリセット
-watch(() => props.activeItem, () => {
-  isEditing.value = false
-  editingText.value = ''
+// アクティブアイテムが変更されたときの処理
+watch(() => props.activeItem, async () => {
+  if (props.isEditMode) {
+    // 編集モード中にアクティブアイテムが変更された場合、新しいアイテムの名前を設定
+    const activeNavItem = props.navItems.find(item => item.id === props.activeItem)
+    if (activeNavItem) {
+      editingText.value = activeNavItem.label
+      await nextTick()
+      inputRef.value?.focus()
+    }
+  }
 })
 </script>
 
 <template>
   <nav class="navigation-bar">
     <div class="nav-scroll-container">
-      <!-- 編集モードでアクティブな項目の場合は編集UI表示 -->
-      <div v-if="props.isEditMode && isEditing" class="edit-name-container">
+      <!-- 編集モードの場合は入力フィールドを表示 -->
+      <div v-if="props.isEditMode" class="edit-name-container">
         <input
           ref="inputRef"
           v-model="editingText"
           type="text"
           class="edit-name-input"
           aria-label="チェックリスト名を編集"
-          @keyup.enter="saveEdit"
-          @keyup.esc="cancelEdit"
           @click.stop
         />
-        <button
-          class="save-name-button"
-          aria-label="変更を保存"
-          @click="saveEdit"
-          title="保存"
-        >
-          ✓
-        </button>
-        <button
-          class="cancel-name-button"
-          aria-label="編集をキャンセル"
-          @click="cancelEdit"
-          title="キャンセル"
-        >
-          ✕
-        </button>
       </div>
       <!-- 通常のナビゲーションUI -->
       <template v-else>
@@ -130,17 +103,6 @@ watch(() => props.activeItem, () => {
           @click="handleNavClick(item.id)"
         >
           <span class="nav-label">{{ item.label }}</span>
-        </button>
-        <!-- 編集モードでアクティブな項目の場合は編集ボタンを表示 -->
-        <button
-          v-if="props.isEditMode"
-          class="edit-name-trigger-button"
-          @click="startEditingName"
-          title="チェックリスト名を編集"
-        >
-          <svg xmlns="http://www.w3.org/2000/svg" height="20" viewBox="0 -960 960 960" width="20" fill="currentColor">
-            <path d="M200-200h57l391-391-57-57-391 391v57Zm-80 80v-170l528-527q12-11 26.5-17t30.5-6q16 0 31 6t26 18l55 56q12 11 17.5 26t5.5 30q0 16-5.5 30.5T817-647L290-120H120Zm640-584-56-56 56 56Zm-141 85-28-29 57 57-29-28Z"/>
-          </svg>
         </button>
         <button
           class="add-button"
@@ -269,70 +231,6 @@ watch(() => props.activeItem, () => {
   min-width: 150px;
 }
 
-.save-name-button,
-.cancel-name-button {
-  background: none;
-  border: none;
-  cursor: pointer;
-  font-size: 20px;
-  padding: 4px 8px;
-  transition: transform 0.2s ease;
-  line-height: 1;
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  min-width: 32px;
-  border-radius: 8px;
-}
-
-.save-name-button {
-  color: #28a745;
-}
-
-.save-name-button:hover {
-  transform: scale(1.2);
-  background: #e8f5e9;
-}
-
-.cancel-name-button {
-  color: #dc3545;
-}
-
-.cancel-name-button:hover {
-  transform: scale(1.2);
-  background: #ffebee;
-}
-
-.edit-name-trigger-button {
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  padding: 6px 12px;
-  background: none;
-  border: none;
-  border-radius: 10px;
-  color: #667eea;
-  cursor: pointer;
-  transition: all 0.3s ease;
-  flex-shrink: 0;
-  /* 文字選択を無効化 */
-  user-select: none;
-  -webkit-user-select: none;
-  -moz-user-select: none;
-  /* 押下時のハイライトを無効化 */
-  -webkit-tap-highlight-color: transparent;
-}
-
-.edit-name-trigger-button:hover {
-  background: #f0f3ff;
-  transform: scale(1.05);
-}
-
-.edit-name-trigger-button svg {
-  width: 20px;
-  height: 20px;
-}
-
 @media (max-width: 600px) {
   .navigation-bar {
     /* スマートフォン用のナビゲーションバーの高さ */
@@ -363,13 +261,6 @@ watch(() => props.activeItem, () => {
     font-size: 13px;
     padding: 6px 10px;
     min-width: 120px;
-  }
-
-  .save-name-button,
-  .cancel-name-button {
-    font-size: 18px;
-    padding: 2px 6px;
-    min-width: 28px;
   }
 }
 </style>
