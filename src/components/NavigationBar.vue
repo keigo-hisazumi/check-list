@@ -231,7 +231,6 @@ watch(() => props.activeItem, async () => {
   background: white;
   color: #333;
   min-width: 150px;
-  text-align: center;
 }
 
 @media (max-width: 600px) {
