@@ -1,4 +1,6 @@
 <script setup lang="ts">
+import { ref, watch, nextTick } from 'vue'
+
 // ナビゲーション項目の型定義
 export interface NavItem {
   id: string
@@ -16,6 +18,7 @@ interface Props {
 interface Emits {
   (e: 'nav-change', id: string): void
   (e: 'add-checklist'): void
+  (e: 'update-checklist-name', id: string, newName: string): void
 }
 
 const props = withDefaults(defineProps<Props>(), {
@@ -23,6 +26,11 @@ const props = withDefaults(defineProps<Props>(), {
 })
 
 const emit = defineEmits<Emits>()
+
+// 編集中のテキスト
+const editingText = ref<string>('')
+// 入力フィールドへの参照
+const inputRef = ref<HTMLInputElement | null>(null)
 
 // ナビゲーション項目クリックハンドラー
 const handleNavClick = (id: string) => {
@@ -33,26 +41,77 @@ const handleNavClick = (id: string) => {
 const handleAddChecklist = () => {
   emit('add-checklist')
 }
+
+// 編集モードが変更されたときの処理
+watch(() => props.isEditMode, async (newValue) => {
+  if (newValue) {
+    // 編集モードに入ったら自動的に編集開始
+    const activeNavItem = props.navItems.find(item => item.id === props.activeItem)
+    if (activeNavItem) {
+      editingText.value = activeNavItem.label
+      await nextTick()
+      inputRef.value?.focus()
+    }
+  } else {
+    // 編集モードを終了するときに変更を保存
+    const trimmedText = editingText.value.trim()
+    if (trimmedText) {
+      const activeNavItem = props.navItems.find(item => item.id === props.activeItem)
+      // 元の名前と異なる場合のみ更新
+      if (activeNavItem && trimmedText !== activeNavItem.label) {
+        emit('update-checklist-name', props.activeItem, trimmedText)
+      }
+    }
+    editingText.value = ''
+  }
+})
+
+// アクティブアイテムが変更されたときの処理
+watch(() => props.activeItem, async () => {
+  if (props.isEditMode) {
+    // 編集モード中にアクティブアイテムが変更された場合、新しいアイテムの名前を設定
+    const activeNavItem = props.navItems.find(item => item.id === props.activeItem)
+    if (activeNavItem) {
+      editingText.value = activeNavItem.label
+      await nextTick()
+      inputRef.value?.focus()
+    }
+  }
+})
 </script>
 
 <template>
   <nav class="navigation-bar">
     <div class="nav-scroll-container">
-      <button
-        v-for="item in navItems"
-        :key="item.id"
-        :class="['nav-item', { active: props.activeItem === item.id }]"
-        @click="handleNavClick(item.id)"
-      >
-        <span class="nav-label">{{ item.label }}</span>
-      </button>
-      <button
-        class="add-button"
-        @click="handleAddChecklist"
-        title="新しいチェックリストを追加"
-      >
-        ＋
-      </button>
+      <!-- 編集モードの場合は入力フィールドを表示 -->
+      <div v-if="props.isEditMode" class="edit-name-container">
+        <input
+          ref="inputRef"
+          v-model="editingText"
+          type="text"
+          class="edit-name-input"
+          aria-label="チェックリスト名を編集"
+          @click.stop
+        />
+      </div>
+      <!-- 通常のナビゲーションUI -->
+      <template v-else>
+        <button
+          v-for="item in navItems"
+          :key="item.id"
+          :class="['nav-item', { active: props.activeItem === item.id }]"
+          @click="handleNavClick(item.id)"
+        >
+          <span class="nav-label">{{ item.label }}</span>
+        </button>
+        <button
+          class="add-button"
+          @click="handleAddChecklist"
+          title="新しいチェックリストを追加"
+        >
+          ＋
+        </button>
+      </template>
     </div>
   </nav>
 </template>
@@ -151,6 +210,29 @@ const handleAddChecklist = () => {
   transform: scale(1.05);
 }
 
+.edit-name-container {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 8px;
+  flex: 1;
+  max-width: 600px;
+  margin: 0 auto;
+}
+
+.edit-name-input {
+  flex: 1;
+  padding: 8px 12px;
+  border: 2px solid #667eea;
+  border-radius: 10px;
+  font-size: 14px;
+  font-weight: 500;
+  outline: none;
+  background: white;
+  color: #333;
+  min-width: 150px;
+}
+
 @media (max-width: 600px) {
   .navigation-bar {
     /* スマートフォン用のナビゲーションバーの高さ */
@@ -175,6 +257,12 @@ const handleAddChecklist = () => {
   .add-button {
     padding: 2px 12px;
     min-width: 50px;
+  }
+
+  .edit-name-input {
+    font-size: 13px;
+    padding: 6px 10px;
+    min-width: 120px;
   }
 }
 </style>

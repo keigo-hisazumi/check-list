@@ -223,6 +223,15 @@ const handleDeleteChecklist = (id: string) => {
   }
 }
 
+// チェックリスト名を更新
+const handleUpdateChecklistName = (id: string, newName: string) => {
+  const checklist = checklists.value.find(c => c.id === id)
+  if (checklist) {
+    checklist.label = newName
+    // チェックリスト設定の変更がwatchで自動的に保存される
+  }
+}
+
 // スワイプ機能の実装
 const touchStartX = ref<number>(0)
 const touchStartY = ref<number>(0)
@@ -372,6 +381,7 @@ const handleTouchEnd = () => {
       :is-edit-mode="isEditMode"
       @nav-change="handleNavChangeWithEditReset"
       @add-checklist="handleAddChecklist"
+      @update-checklist-name="handleUpdateChecklistName"
     />
     <div class="view-container">
       <div
