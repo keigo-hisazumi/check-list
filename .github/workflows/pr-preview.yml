@@ -32,7 +32,7 @@ jobs:
 
       - name: Build with PR-specific base path
         env:
-          VITE_BASE_PATH: /sns-memo/pr-${{ github.event.number }}/
+          VITE_BASE_PATH: /check-list/pr-${{ github.event.number }}/
         run: npm run build
 
       - name: Deploy PR preview to gh-pages
@@ -48,7 +48,7 @@ jobs:
         with:
           script: |
             const prNumber = context.issue.number;
-            const previewUrl = `https://keigo-hisazumi.github.io/sns-memo/pr-${prNumber}/`;
+            const previewUrl = `https://keigo-hisazumi.github.io/check-list/pr-${prNumber}/`;
             const marker = '<!-- pr-preview -->';
             const body = [
               marker,
