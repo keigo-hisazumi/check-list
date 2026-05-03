@@ -1,105 +1,116 @@
-name: PR Preview on GitHub Pages
+name: PR Preview
 
 on:
   pull_request:
-    types:
-      - opened
-      - synchronize
-      - reopened
+    types: [opened, synchronize, reopened, closed]
+    branches: [main]
 
 permissions:
-  contents: read
-  pages: write
-  id-token: write
+  contents: write
   pull-requests: write
 
 concurrency:
-  group: "pages-preview-${{ github.event.pull_request.number }}"
+  group: pr-preview-${{ github.event.number }}
   cancel-in-progress: true
 
 jobs:
-  build:
+  deploy-preview:
+    if: github.event.action != 'closed'
     runs-on: ubuntu-latest
     steps:
       - name: Checkout
         uses: actions/checkout@v4
 
-      - name: Setup Node
+      - name: Setup Node.js
         uses: actions/setup-node@v4
         with:
-          node-version: '20'
-          cache: 'npm'
+          node-version: 20
+          cache: npm
 
       - name: Install dependencies
         run: npm ci
 
-      - name: Build
+      - name: Build with PR-specific base path
+        env:
+          VITE_BASE_PATH: /sns-memo/pr-${{ github.event.number }}/
         run: npm run build
 
-      - name: Setup Pages
-        uses: actions/configure-pages@v4
-
-      - name: Upload artifact
-        uses: actions/upload-pages-artifact@v3
+      - name: Deploy PR preview to gh-pages
+        uses: peaceiris/actions-gh-pages@v4
         with:
-          path: './dist'
+          github_token: ${{ secrets.GITHUB_TOKEN }}
+          publish_dir: ./dist
+          destination_dir: pr-${{ github.event.number }}
+          keep_files: true
 
-  deploy-preview:
-    needs: build
-    runs-on: ubuntu-latest
-    environment:
-      name: github-pages
-      url: ${{ steps.deployment.outputs.page_url }}
-    steps:
-      - name: Deploy PR preview
-        id: deployment
-        uses: actions/deploy-pages@v4
-        with:
-          preview: true
-
-      - name: Comment preview URL
+      - name: Post preview URL comment
         uses: actions/github-script@v7
         with:
           script: |
-            const url = `${{ toJson(steps.deployment.outputs.page_url) }}`;
+            const prNumber = context.issue.number;
+            const previewUrl = `https://keigo-hisazumi.github.io/sns-memo/pr-${prNumber}/`;
+            const marker = '<!-- pr-preview -->';
             const body = [
-              '## 🔍 PRプレビュー',
+              marker,
+              '## プレビュー環境 🚀',
               '',
-              `プレビューURL: ${url}`,
+              `| | |`,
+              `|---|---|`,
+              `| **プレビューURL** | [${previewUrl}](${previewUrl}) |`,
+              `| **コミット** | \`${context.sha.slice(0, 7)}\` |`,
               '',
-              '_このコメントはPRへのpushごとに自動更新されます。_'
+              '*コードをプッシュするたびに自動更新されます。*',
             ].join('\n');
 
-            const { owner, repo } = context.repo;
-            const issue_number = context.issue.number;
-            const marker = '## 🔍 PRプレビュー';
-
-            const comments = await github.paginate(github.rest.issues.listComments, {
-              owner,
-              repo,
-              issue_number,
-              per_page: 100,
+            const { data: comments } = await github.rest.issues.listComments({
+              owner: context.repo.owner,
+              repo: context.repo.repo,
+              issue_number: prNumber,
             });
 
-            const existing = comments.find(
-              (comment) =>
-                comment.user.type === 'Bot' &&
-                comment.body &&
-                comment.body.includes(marker),
-            );
-
+            const existing = comments.find(c => c.body.includes(marker));
             if (existing) {
               await github.rest.issues.updateComment({
-                owner,
-                repo,
+                owner: context.repo.owner,
+                repo: context.repo.repo,
                 comment_id: existing.id,
                 body,
               });
             } else {
               await github.rest.issues.createComment({
-                owner,
-                repo,
-                issue_number,
+                owner: context.repo.owner,
+                repo: context.repo.repo,
+                issue_number: prNumber,
                 body,
               });
             }
+
+  cleanup-preview:
+    if: github.event.action == 'closed'
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+
+      - name: Remove preview directory from gh-pages
+        run: |
+          git config user.name "github-actions[bot]"
+          git config user.email "github-actions[bot]@users.noreply.github.com"
+
+          if ! git ls-remote --exit-code origin gh-pages; then
+            echo "gh-pages branch does not exist, skipping cleanup"
+            exit 0
+          fi
+
+          git fetch origin gh-pages
+          git checkout gh-pages
+
+          if [ -d "pr-${{ github.event.number }}" ]; then
+            git rm -rf "pr-${{ github.event.number }}"
+            git commit -m "chore: remove PR #${{ github.event.number }} preview"
+            git push origin gh-pages
+          else
+            echo "Preview directory pr-${{ github.event.number }} not found, skipping"
+          fi
