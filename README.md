@@ -51,8 +51,8 @@ npm run preview
 このアプリケーションはGitHub Pagesに自動デプロイされます。
 
 - mainブランチへのプッシュで自動的にデプロイが実行されます
-- Pull Request作成時にGitHub Pagesの**PRプレビュー**が自動デプロイされます
-- プレビューURLはPRコメントに自動投稿/更新されます
+- Pull Request作成時に `gh-pages` ブランチ配下へ**PRプレビュー**が自動デプロイされます
+- プレビューURL（`/check-list/pr-<PR番号>/`）はPRコメントに自動投稿/更新されます
 - GitHub Actionsワークフローが自動的にビルドとデプロイを行います
 - デプロイされたアプリケーションは [https://keigo-hisazumi.github.io/check-list/](https://keigo-hisazumi.github.io/check-list/) でアクセス可能です
 
