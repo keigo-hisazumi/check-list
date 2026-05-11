@@ -501,10 +501,10 @@ const handleTouchEnd = () => {
 }
 
 .bottom-bar {
-  flex-shrink: 0; /* flex列の中で縮まない */
+  flex-shrink: 0;
   background: white;
   box-shadow: 0 -4px 20px rgba(0, 0, 0, 0.15);
-  padding: 15px 20px calc(15px + var(--safe-area-inset-bottom, 0px));
+  padding: 15px 20px calc(15px + min(env(safe-area-inset-bottom, 0px), 34px));
   z-index: 1001;
 }
 
@@ -582,7 +582,7 @@ const handleTouchEnd = () => {
 
 @media (max-width: 600px) {
   .bottom-bar {
-    padding: 12px 16px calc(12px + var(--safe-area-inset-bottom, 0px));
+    padding: 12px 16px calc(12px + min(env(safe-area-inset-bottom, 0px), 34px));
   }
 
   .edit-button,
