@@ -1,5 +1,5 @@
 <script setup lang="ts">
-import { ref, computed, onMounted, onBeforeUnmount, watch } from 'vue'
+import { ref, computed, onMounted, watch } from 'vue'
 import NavigationBar, { type NavItem } from './components/NavigationBar.vue'
 import GenericChecklist from './components/GenericChecklist.vue'
 
@@ -105,32 +105,9 @@ watch(checklists, () => {
   saveChecklists()
 }, { deep: true })
 
-// フッター要素の ref と ResizeObserver
-const bottomBarEl = ref<HTMLElement | null>(null)
-let bottomBarObserver: ResizeObserver | null = null
-
 // コンポーネントマウント時にチェックリストを読み込む
 onMounted(() => {
   loadChecklists()
-
-  // フッターの実際の高さを CSS 変数に反映し、view-container の bottom を動的に設定する
-  if (bottomBarEl.value) {
-    const applyHeight = () => {
-      if (bottomBarEl.value) {
-        document.documentElement.style.setProperty(
-          '--bottom-bar-height',
-          `${bottomBarEl.value.offsetHeight}px`
-        )
-      }
-    }
-    applyHeight()
-    bottomBarObserver = new ResizeObserver(applyHeight)
-    bottomBarObserver.observe(bottomBarEl.value)
-  }
-})
-
-onBeforeUnmount(() => {
-  bottomBarObserver?.disconnect()
 })
 
 // ナビゲーション項目を計算
@@ -446,7 +423,7 @@ const handleTouchEnd = () => {
         </div>
       </div>
     </div>
-    <div class="bottom-bar" ref="bottomBarEl">
+    <div class="bottom-bar">
       <div class="progress">
         {{ stats.completedCount }} / {{ stats.totalCount }} 完了
       </div>
@@ -474,21 +451,18 @@ const handleTouchEnd = () => {
   height: 100dvh;
   display: flex;
   flex-direction: column;
-  overflow-x: hidden;
-  touch-action: pan-y; /* 垂直スクロールのみを許可 */
-  position: relative;
-  /* ナビゲーションバーの高さを定義 */
+  overflow: hidden;
+  touch-action: pan-y;
+  /* ナビゲーションバー（position:fixed）の高さ分だけパディングを確保 */
   --nav-bar-height: calc(6px + env(safe-area-inset-top) + 10px + 14px + 10px + 6px);
+  padding-top: var(--nav-bar-height);
 }
 
 .view-container {
-  position: absolute;
-  top: var(--nav-bar-height);
-  bottom: var(--bottom-bar-height, calc(120px + env(safe-area-inset-bottom, 0px)));
-  left: 0;
-  right: 0;
+  flex: 1;
+  min-height: 0; /* flex子要素がoverflow-autoを正しく動作させるために必要 */
   display: flex;
-  overflow: hidden; /* スクロールは各ビュー内で独立して行う */
+  overflow: hidden;
   user-select: none;
   -webkit-user-select: none;
   -moz-user-select: none;
@@ -497,45 +471,41 @@ const handleTouchEnd = () => {
 .view-slider {
   display: flex;
   width: 100%;
-  height: 100%; /* コンテナの高さを継承 */
+  height: 100%;
   will-change: transform;
 }
 
 .view-wrapper {
   flex: 0 0 100%;
   width: 100%;
-  height: 100%; /* 親の高さを継承 */
+  height: 100%;
   display: flex;
   justify-content: center;
   align-items: flex-start;
   padding: 20px;
   box-sizing: border-box;
-  overflow-y: auto; /* 各ビューが独立してスクロール */
+  overflow-y: auto;
   overflow-x: hidden;
-  -webkit-overflow-scrolling: touch; /* iOSのモメンタムスクロール */
+  -webkit-overflow-scrolling: touch;
 }
 
 @media (max-width: 600px) {
   .app {
-    /* スマートフォン用のナビゲーションバーの高さ */
     --nav-bar-height: calc(6px + env(safe-area-inset-top) + 8px + 13px + 8px + 6px);
   }
 
   .view-wrapper {
     padding: 0;
-    align-items: stretch; /* モバイルでコンテナを縦に引き伸ばす */
+    align-items: stretch;
   }
 }
 
 .bottom-bar {
-  position: fixed;
-  bottom: 0;
-  left: 0;
-  right: 0;
+  flex-shrink: 0; /* flex列の中で縮まない */
   background: white;
   box-shadow: 0 -4px 20px rgba(0, 0, 0, 0.15);
   padding: 15px 20px calc(15px + var(--safe-area-inset-bottom, 0px));
-  z-index: 1001; /* ナビゲーションバーよりも上に配置 */
+  z-index: 1001;
 }
 
 .progress {
