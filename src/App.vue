@@ -1,5 +1,5 @@
 <script setup lang="ts">
-import { ref, computed, onMounted, watch } from 'vue'
+import { ref, computed, onMounted, onBeforeUnmount, watch } from 'vue'
 import NavigationBar, { type NavItem } from './components/NavigationBar.vue'
 import GenericChecklist from './components/GenericChecklist.vue'
 
@@ -102,9 +102,32 @@ watch(checklists, () => {
   saveChecklists()
 }, { deep: true })
 
+// フッター要素の ref と ResizeObserver
+const bottomBarEl = ref<HTMLElement | null>(null)
+let bottomBarObserver: ResizeObserver | null = null
+
 // コンポーネントマウント時にチェックリストを読み込む
 onMounted(() => {
   loadChecklists()
+
+  // フッターの実際の高さを CSS 変数に反映し、view-container の bottom を動的に設定する
+  if (bottomBarEl.value) {
+    const applyHeight = () => {
+      if (bottomBarEl.value) {
+        document.documentElement.style.setProperty(
+          '--bottom-bar-height',
+          `${bottomBarEl.value.offsetHeight}px`
+        )
+      }
+    }
+    applyHeight()
+    bottomBarObserver = new ResizeObserver(applyHeight)
+    bottomBarObserver.observe(bottomBarEl.value)
+  }
+})
+
+onBeforeUnmount(() => {
+  bottomBarObserver?.disconnect()
 })
 
 // ナビゲーション項目を計算
@@ -406,7 +429,7 @@ const handleTouchEnd = () => {
         </div>
       </div>
     </div>
-    <div class="bottom-bar">
+    <div class="bottom-bar" ref="bottomBarEl">
       <div class="progress">
         {{ stats.completedCount }} / {{ stats.totalCount }} 完了
       </div>
@@ -444,7 +467,7 @@ const handleTouchEnd = () => {
 .view-container {
   position: absolute;
   top: var(--nav-bar-height); /* ナビゲーションバーの直下から開始 */
-  bottom: 100px;
+  bottom: var(--bottom-bar-height, 100px);
   left: 0;
   right: 0;
   display: flex;
@@ -492,7 +515,7 @@ const handleTouchEnd = () => {
   right: 0;
   background: white;
   box-shadow: 0 -4px 20px rgba(0, 0, 0, 0.15);
-  padding: 15px 20px calc(15px + env(safe-area-inset-bottom));
+  padding: 15px 20px calc(15px + var(--safe-area-inset-bottom, min(34px, env(safe-area-inset-bottom))));
   z-index: 1001; /* ナビゲーションバーよりも上に配置 */
 }
 
@@ -570,7 +593,7 @@ const handleTouchEnd = () => {
 
 @media (max-width: 600px) {
   .bottom-bar {
-    padding: 12px 16px calc(12px + env(safe-area-inset-bottom));
+    padding: 12px 16px calc(12px + var(--safe-area-inset-bottom, min(34px, env(safe-area-inset-bottom))));
   }
 
   .edit-button,
