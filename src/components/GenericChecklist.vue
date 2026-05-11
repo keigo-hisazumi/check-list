@@ -518,10 +518,11 @@ defineExpose({
         v-for="(item, index) in checklistItems"
         :key="item.id"
         :ref="el => { itemRefs[index] = el ? (el as HTMLElement) : null }"
-        :class="['checklist-item', { 
-          checked: checkedItems[item.id], 
+        :class="['checklist-item', {
+          checked: checkedItems[item.id],
           editing: editingItemId === item.id,
-          dragging: draggingItemId === item.id
+          dragging: draggingItemId === item.id,
+          'drag-mode': isEditMode
         }]"
         :style="draggingItemId === item.id ? { transform: `translateY(${dragOffsetY}px)` } : {}"
         @touchstart="(e) => handleTouchStart(e, item.id, index)"
@@ -634,14 +635,18 @@ defineExpose({
   border-radius: 10px;
   transition: all 0.3s ease;
   cursor: pointer;
-  touch-action: none; /* ブラウザのデフォルトタッチ動作を無効化 */
-  user-select: none; /* 長押し時のテキスト選択を防止 */
-  -webkit-user-select: none; /* Safari用 */
-  -moz-user-select: none; /* Firefox用 */
-  -webkit-touch-callout: none; /* iOS用：長押しメニューを無効化 */
-  -webkit-tap-highlight-color: transparent; /* タップ時のハイライトを無効化 */
+  touch-action: pan-y; /* 縦スクロールを許可（デフォルト） */
+  user-select: none;
+  -webkit-user-select: none;
+  -moz-user-select: none;
+  -webkit-touch-callout: none;
+  -webkit-tap-highlight-color: transparent;
   min-height: 46px;
   box-sizing: border-box;
+}
+
+.checklist-item.drag-mode {
+  touch-action: none; /* 編集モード時はドラッグのためにすべてのタッチを制御 */
 }
 
 .checklist-item.dragging {

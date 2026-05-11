@@ -59,6 +59,9 @@ const activeView = ref<string>('')
 // コンポーネントのrefを管理（動的に生成）
 const checklistRefs = ref<Record<string, InstanceType<typeof GenericChecklist> | null>>({})
 
+// view-wrapperのrefを管理（スクロール位置リセット用）
+const viewWrapperRefs = ref<Record<string, HTMLElement | null>>({})
+
 // 統計情報の管理
 const stats = ref<{ completedCount: number; totalCount: number }>({
   completedCount: 0,
@@ -185,9 +188,13 @@ const currentIndex = computed(() =>
 // ナビゲーション変更ハンドラー
 const handleNavChange = (viewId: string) => {
   activeView.value = viewId
-  // ナビゲーション変更時はスライドオフセットをリセット
   translateX.value = 0
   isTransitioning.value = false
+  // 切り替え先のビューのスクロール位置をトップにリセット
+  const wrapper = viewWrapperRefs.value[viewId]
+  if (wrapper) {
+    wrapper.scrollTop = 0
+  }
 }
 
 // リセットまたはリスト削除ボタンのハンドラー
@@ -371,13 +378,22 @@ const handleTouchEnd = () => {
 
   // 横スワイプの場合のみ、画面遷移を実行
   if (swipeDirection.value === 'horizontal') {
+    let nextViewId: string | null = null
     // 右スワイプ（前の画面へ）
     if (swipeDistance > swipeThreshold && currentIdx > 0) {
-      activeView.value = checklists.value[currentIdx - 1].id
+      nextViewId = checklists.value[currentIdx - 1].id
     }
     // 左スワイプ（次の画面へ）
     else if (swipeDistance < -swipeThreshold && currentIdx < checklists.value.length - 1) {
-      activeView.value = checklists.value[currentIdx + 1].id
+      nextViewId = checklists.value[currentIdx + 1].id
+    }
+    if (nextViewId) {
+      activeView.value = nextViewId
+      // 切り替え先のスクロール位置をトップにリセット
+      const wrapper = viewWrapperRefs.value[nextViewId]
+      if (wrapper) {
+        wrapper.scrollTop = 0
+      }
     }
   }
 
@@ -418,6 +434,7 @@ const handleTouchEnd = () => {
           v-for="checklist in checklists"
           :key="checklist.id"
           class="view-wrapper"
+          :ref="el => { viewWrapperRefs[checklist.id] = el as HTMLElement | null }"
         >
           <GenericChecklist
             :ref="el => { checklistRefs[checklist.id] = el as InstanceType<typeof GenericChecklist> | null }"
@@ -466,35 +483,36 @@ const handleTouchEnd = () => {
 
 .view-container {
   position: absolute;
-  top: var(--nav-bar-height); /* ナビゲーションバーの直下から開始 */
-  bottom: var(--bottom-bar-height, 100px);
+  top: var(--nav-bar-height);
+  bottom: var(--bottom-bar-height, calc(120px + env(safe-area-inset-bottom, 0px)));
   left: 0;
   right: 0;
   display: flex;
-  justify-content: flex-start;
-  align-items: stretch;
-  overflow-x: hidden; /* 横スクロールは無効 */
-  overflow-y: auto; /* 縦スクロールを有効化 */
-  user-select: none; /* スワイプ時のテキスト選択を防止 */
-  -webkit-user-select: none; /* Safari用 */
-  -moz-user-select: none; /* Firefox用 */
+  overflow: hidden; /* スクロールは各ビュー内で独立して行う */
+  user-select: none;
+  -webkit-user-select: none;
+  -moz-user-select: none;
 }
 
 .view-slider {
   display: flex;
   width: 100%;
+  height: 100%; /* コンテナの高さを継承 */
   will-change: transform;
 }
 
 .view-wrapper {
   flex: 0 0 100%;
   width: 100%;
+  height: 100%; /* 親の高さを継承 */
   display: flex;
   justify-content: center;
   align-items: flex-start;
   padding: 20px;
   box-sizing: border-box;
-  min-height: 100%; /* 最小高さを100%に設定 */
+  overflow-y: auto; /* 各ビューが独立してスクロール */
+  overflow-x: hidden;
+  -webkit-overflow-scrolling: touch; /* iOSのモメンタムスクロール */
 }
 
 @media (max-width: 600px) {
@@ -505,6 +523,7 @@ const handleTouchEnd = () => {
 
   .view-wrapper {
     padding: 0;
+    align-items: stretch; /* モバイルでコンテナを縦に引き伸ばす */
   }
 }
 
