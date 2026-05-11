@@ -9,10 +9,11 @@ const updateSafeAreaBottom = () => {
   probe.style.cssText =
     'position:fixed;bottom:0;width:0;height:env(safe-area-inset-bottom);pointer-events:none;visibility:hidden;z-index:-1'
   document.body.appendChild(probe)
-  document.documentElement.style.setProperty(
-    '--safe-area-inset-bottom',
-    `${probe.offsetHeight}px`
-  )
+  // iOS PWA 起動直後に Dynamic Island デバイスで env(safe-area-inset-bottom) が
+  // 誤って大きい値（safe-area-inset-top の値など）を返すバグへの対処。
+  // ホームインジケーターの高さは全 iPhone で 34px のため上限を設ける。
+  const inset = Math.min(probe.offsetHeight, 34)
+  document.documentElement.style.setProperty('--safe-area-inset-bottom', `${inset}px`)
   document.body.removeChild(probe)
 }
 
