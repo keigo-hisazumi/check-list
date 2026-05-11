@@ -515,7 +515,7 @@ const handleTouchEnd = () => {
   right: 0;
   background: white;
   box-shadow: 0 -4px 20px rgba(0, 0, 0, 0.15);
-  padding: 15px 20px calc(15px + var(--safe-area-inset-bottom, min(34px, env(safe-area-inset-bottom))));
+  padding: 15px 20px calc(15px + env(safe-area-inset-bottom, 0px));
   z-index: 1001; /* ナビゲーションバーよりも上に配置 */
 }
 
@@ -593,7 +593,7 @@ const handleTouchEnd = () => {
 
 @media (max-width: 600px) {
   .bottom-bar {
-    padding: 12px 16px calc(12px + var(--safe-area-inset-bottom, min(34px, env(safe-area-inset-bottom))));
+    padding: 12px 16px calc(12px + env(safe-area-inset-bottom, 0px));
   }
 
   .edit-button,
