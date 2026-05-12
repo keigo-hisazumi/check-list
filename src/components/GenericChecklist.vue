@@ -1,15 +1,24 @@
 <script setup lang="ts">
-import { ref, computed, watch, onMounted, nextTick } from 'vue'
+import { ref, computed, watch, onMounted, onUnmounted, nextTick } from 'vue'
+import {
+  subscribeChecklistData,
+  saveChecklistData,
+  type ChecklistItem,
+  type ChecklistData
+} from '../firebase/firestore'
+import type { Unsubscribe } from 'firebase/firestore'
 
 // Props定義
 interface Props {
-  checklistId: string  // チェックリストを識別するID（localStorageのキーに使用）
-  initialItems: ChecklistItem[]  // 初期項目
+  checklistId: string
+  initialItems: ChecklistItem[]
   isActive?: boolean
+  uid?: string
 }
 
 const props = withDefaults(defineProps<Props>(), {
-  isActive: false
+  isActive: false,
+  uid: ''
 })
 
 // Emits定義
@@ -19,12 +28,6 @@ interface Emits {
 
 const emit = defineEmits<Emits>()
 
-// チェックリスト項目の型定義
-interface ChecklistItem {
-  id: string
-  label: string
-}
-
 // 並べ替え可能な項目リスト
 const checklistItems = ref<ChecklistItem[]>([...props.initialItems])
 
@@ -32,11 +35,10 @@ const checklistItems = ref<ChecklistItem[]>([...props.initialItems])
 const checkedItems = ref<Record<string, boolean>>({})
 
 // 編集状態の管理
-const isEditMode = ref<boolean>(false) // 編集モードのフラグ
+const isEditMode = ref<boolean>(false)
 const editingItemId = ref<string | null>(null)
 const editingText = ref<string>('')
 const customLabels = ref<Record<string, string>>({})
-// 編集中の入力フィールドへの参照（一度に1つの項目のみ編集可能）
 let editInputElement: HTMLInputElement | null = null
 const setEditInputRef = (el: Element | object | null) => {
   if (el instanceof HTMLInputElement) {
@@ -50,112 +52,213 @@ const setEditInputRef = (el: Element | object | null) => {
 const draggingItemId = ref<string | null>(null)
 const dragStartY = ref<number>(0)
 const dragCurrentY = ref<number>(0)
-const dragOffsetY = ref<number>(0) // ドラッグ中の要素の視覚的な移動量
+const dragOffsetY = ref<number>(0)
 const longPressTimer = ref<number | null>(null)
 const isDragging = ref<boolean>(false)
 const dragItemIndex = ref<number>(-1)
-const DRAG_START_DELAY = 0 // ドラッグ開始遅延時間（ミリ秒）- タッチの瞬間から並べ替え可能
-const itemRefs = ref<(HTMLElement | null)[]>([]) // 各アイテムのDOM要素参照
+const DRAG_START_DELAY = 0
+const itemRefs = ref<(HTMLElement | null)[]>([])
 
-// ユーザーが追加したカスタムアイテムをローカルストレージから読み込む
-const loadCustomItems = (): ChecklistItem[] => {
-  const savedCustomItems = localStorage.getItem(`${props.checklistId}-custom-items`)
-  if (savedCustomItems) {
-    try {
-      return JSON.parse(savedCustomItems)
-    } catch (e) {
-      console.error('Failed to load custom items:', e)
-      return []
-    }
+// Firestore 同期関連
+let firestoreUnsubscribe: Unsubscribe | null = null
+let isSavingToFirestore = false
+let lastFirestoreJson = ''
+
+// ---- LocalStorage ヘルパー ----
+const loadCustomItemsFromLS = (): ChecklistItem[] => {
+  const saved = localStorage.getItem(`${props.checklistId}-custom-items`)
+  if (saved) {
+    try { return JSON.parse(saved) } catch { return [] }
   }
   return []
 }
 
-// カスタムアイテムをローカルストレージに保存
-const saveCustomItems = (customItems: ChecklistItem[]) => {
-  localStorage.setItem(`${props.checklistId}-custom-items`, JSON.stringify(customItems))
+const saveCustomItemsToLS = (items: ChecklistItem[]) => {
+  localStorage.setItem(`${props.checklistId}-custom-items`, JSON.stringify(items))
 }
 
-// すべてのアイテム（初期アイテム + カスタムアイテム）を取得
 const getAllItems = (): ChecklistItem[] => {
-  const customItems = loadCustomItems()
-  return [...props.initialItems, ...customItems]
+  return [...props.initialItems, ...loadCustomItemsFromLS()]
 }
 
-// ローカルストレージから並び順を読み込む
-const loadItemOrder = () => {
+const loadItemOrderFromLS = () => {
   const allItems = getAllItems()
   const savedOrder = localStorage.getItem(`${props.checklistId}-order`)
   if (savedOrder) {
     try {
       const orderIds: string[] = JSON.parse(savedOrder)
-      // 保存された順序に従ってアイテムを並べ替え
       const orderedItems: ChecklistItem[] = []
       orderIds.forEach(id => {
-        const item = allItems.find(item => item.id === id)
-        if (item) {
-          orderedItems.push(item)
-        }
+        const item = allItems.find(i => i.id === id)
+        if (item) orderedItems.push(item)
       })
-      // 新しく追加されたアイテムがある場合は末尾に追加
       allItems.forEach(item => {
-        if (!orderIds.includes(item.id)) {
-          orderedItems.push(item)
-        }
+        if (!orderIds.includes(item.id)) orderedItems.push(item)
       })
       checklistItems.value = orderedItems
-    } catch (e) {
-      console.error('Failed to load item order:', e)
+    } catch {
       checklistItems.value = allItems
     }
   } else {
-    // 保存された順序がない場合は全アイテムを使用
     checklistItems.value = allItems
   }
 }
 
-// 並び順をローカルストレージに保存
-const saveItemOrder = () => {
-  const orderIds = checklistItems.value.map(item => item.id)
+const saveItemOrderToLS = () => {
+  const orderIds = checklistItems.value.map(i => i.id)
   localStorage.setItem(`${props.checklistId}-order`, JSON.stringify(orderIds))
 }
 
-// ローカルストレージからチェック状態を読み込む
-const loadCheckedState = () => {
+const loadCheckedStateFromLS = () => {
   const saved: Record<string, boolean> = {}
   checklistItems.value.forEach(item => {
-    const value = localStorage.getItem(`${props.checklistId}-${item.id}`)
-    saved[item.id] = value === 'true'
+    const val = localStorage.getItem(`${props.checklistId}-${item.id}`)
+    saved[item.id] = val === 'true'
   })
   checkedItems.value = saved
 }
 
-// ローカルストレージからカスタムラベルを読み込む
-const loadCustomLabels = () => {
+const loadCustomLabelsFromLS = () => {
   const saved: Record<string, string> = {}
   checklistItems.value.forEach(item => {
-    const value = localStorage.getItem(`${props.checklistId}-${item.id}-label`)
-    if (value) {
-      saved[item.id] = value
-    }
+    const val = localStorage.getItem(`${props.checklistId}-${item.id}-label`)
+    if (val) saved[item.id] = val
   })
   customLabels.value = saved
 }
 
-// コンポーネントマウント時に状態を読み込む
-onMounted(() => {
-  loadItemOrder()
-  loadCheckedState()
-  loadCustomLabels()
+// ---- Firestore ヘルパー ----
+
+// 現在の状態を ChecklistData にまとめる
+const buildChecklistData = (): ChecklistData => {
+  // customItems = checklistItems のうち initialItems に含まれないもの
+  const initialIds = new Set(props.initialItems.map(i => i.id))
+  const customItems = checklistItems.value.filter(i => !initialIds.has(i.id))
+  return {
+    customItems,
+    order: checklistItems.value.map(i => i.id),
+    checkedItems: { ...checkedItems.value },
+    customLabels: { ...customLabels.value }
+  }
+}
+
+// Firestoreに保存（重複保存を避けるためdebounce的に制御）
+let saveTimer: ReturnType<typeof setTimeout> | null = null
+const scheduleSaveToFirestore = () => {
+  if (!props.uid) return
+  if (saveTimer) clearTimeout(saveTimer)
+  saveTimer = setTimeout(async () => {
+    if (!props.uid) return
+    const data = buildChecklistData()
+    const json = JSON.stringify(data)
+    if (json === lastFirestoreJson) return
+    isSavingToFirestore = true
+    try {
+      await saveChecklistData(props.uid, props.checklistId, data)
+      lastFirestoreJson = json
+    } catch (e) {
+      console.error('Firestore save failed:', e)
+    } finally {
+      isSavingToFirestore = false
+    }
+  }, 500)
+}
+
+// Firestoreのデータを状態に適用
+const applyFirestoreData = (data: ChecklistData) => {
+  const allInitialItems = [...props.initialItems]
+  const customItemMap = new Map(data.customItems.map(i => [i.id, i]))
+
+  // order に従って並べ替え
+  const allItems: ChecklistItem[] = []
+  data.order.forEach(id => {
+    const initial = allInitialItems.find(i => i.id === id)
+    if (initial) {
+      allItems.push(initial)
+    } else if (customItemMap.has(id)) {
+      allItems.push(customItemMap.get(id)!)
+    }
+  })
+  // order に含まれていないものを末尾に追加
+  allInitialItems.forEach(i => {
+    if (!data.order.includes(i.id)) allItems.push(i)
+  })
+  data.customItems.forEach(i => {
+    if (!data.order.includes(i.id)) allItems.push(i)
+  })
+
+  checklistItems.value = allItems
+  checkedItems.value = { ...data.checkedItems }
+  customLabels.value = { ...data.customLabels }
+
+  // ローカルストレージにもキャッシュ
+  saveItemOrderToLS()
+  saveCustomItemsToLS(data.customItems)
+  Object.entries(data.checkedItems).forEach(([id, checked]) => {
+    localStorage.setItem(`${props.checklistId}-${id}`, String(checked))
+  })
+  Object.entries(data.customLabels).forEach(([id, label]) => {
+    localStorage.setItem(`${props.checklistId}-${id}-label`, label)
+  })
+}
+
+// Firestoreの購読を開始
+const startFirestoreSync = () => {
+  if (!props.uid) return
+  stopFirestoreSync()
+  firestoreUnsubscribe = subscribeChecklistData(props.uid, props.checklistId, (data) => {
+    if (isSavingToFirestore) return
+    if (data) {
+      const json = JSON.stringify(data)
+      if (json === lastFirestoreJson) return
+      lastFirestoreJson = json
+      applyFirestoreData(data)
+    } else {
+      // Firestoreにデータがなければローカルのデータをアップロード
+      scheduleSaveToFirestore()
+    }
+  })
+}
+
+const stopFirestoreSync = () => {
+  if (firestoreUnsubscribe) {
+    firestoreUnsubscribe()
+    firestoreUnsubscribe = null
+  }
+}
+
+// uid が変わったら購読を再設定
+watch(() => props.uid, (newUid) => {
+  if (newUid) {
+    startFirestoreSync()
+  } else {
+    stopFirestoreSync()
+  }
 })
 
-// チェック状態が変わったらローカルストレージに保存
+// コンポーネントマウント時に状態を読み込む
+onMounted(() => {
+  loadItemOrderFromLS()
+  loadCheckedStateFromLS()
+  loadCustomLabelsFromLS()
+  if (props.uid) {
+    startFirestoreSync()
+  }
+})
+
+onUnmounted(() => {
+  stopFirestoreSync()
+  if (saveTimer) clearTimeout(saveTimer)
+})
+
+// チェック状態が変わったらローカルストレージ & Firestore に保存
 watch(
   checkedItems,
   (newValue) => {
     Object.entries(newValue).forEach(([id, checked]) => {
       localStorage.setItem(`${props.checklistId}-${id}`, String(checked))
     })
+    scheduleSaveToFirestore()
   },
   { deep: true }
 )
@@ -172,14 +275,10 @@ const handleCheckChange = (id: string) => {
 const startEdit = async (id: string) => {
   editingItemId.value = id
   editingText.value = customLabels.value[id] || checklistItems.value.find(item => item.id === id)?.label || ''
-  
-  // 次のティックで入力フィールドを表示してスクロール
   await nextTick()
-  // 初回のnextTick後、さらに確実にrefが利用可能になるまで待つ
   await nextTick()
   if (editInputElement) {
     editInputElement.focus()
-    // 入力フィールドが画面内に表示されるようスクロール
     editInputElement.scrollIntoView({ behavior: 'smooth', block: 'center' })
   }
 }
@@ -189,12 +288,9 @@ const cancelEdit = () => {
   const currentId = editingItemId.value
   editingItemId.value = null
   editingText.value = ''
-  
-  // 編集中のアイテムが空のラベルを持つ新規アイテムの場合は削除
   if (currentId) {
     const item = checklistItems.value.find(item => item.id === currentId)
     if (item && item.label === '' && !customLabels.value[currentId]) {
-      // 新規追加途中でキャンセルされたアイテムを削除
       checklistItems.value = checklistItems.value.filter(item => item.id !== currentId)
     }
   }
@@ -204,36 +300,22 @@ const cancelEdit = () => {
 const saveEdit = (id: string) => {
   const trimmedText = editingText.value.trim()
   if (trimmedText) {
-    // テキストがある場合は保存
-    customLabels.value = {
-      ...customLabels.value,
-      [id]: trimmedText
-    }
+    customLabels.value = { ...customLabels.value, [id]: trimmedText }
     localStorage.setItem(`${props.checklistId}-${id}-label`, trimmedText)
-    
-    // 新規アイテムの場合はカスタムアイテムとして永続化
+
     const item = checklistItems.value.find(item => item.id === id)
     if (item && item.label === '') {
-      // 新規アイテムをカスタムアイテムとして保存
-      const customItems = loadCustomItems()
-      const newItem: ChecklistItem = {
-        id: id,
-        label: trimmedText
-      }
+      const customItems = loadCustomItemsFromLS()
+      const newItem: ChecklistItem = { id, label: trimmedText }
       customItems.push(newItem)
-      saveCustomItems(customItems)
-      
-      // アイテムのラベルを更新
+      saveCustomItemsToLS(customItems)
       item.label = trimmedText
-      
-      // 並び順を保存
-      saveItemOrder()
+      saveItemOrderToLS()
     }
+    scheduleSaveToFirestore()
   } else {
-    // テキストが空の場合
     const item = checklistItems.value.find(item => item.id === id)
     if (item && item.label === '') {
-      // 新規追加途中で空のまま保存しようとした場合は削除
       checklistItems.value = checklistItems.value.filter(item => item.id !== id)
     }
   }
@@ -243,66 +325,44 @@ const saveEdit = (id: string) => {
 
 // 新しいアイテムを追加
 const addNewItem = async () => {
-  // 新しいアイテムのIDを生成（タイムスタンプベース）
   const newId = `${props.checklistId}-custom-${Date.now()}`
-  const newItem: ChecklistItem = {
-    id: newId,
-    label: ''
-  }
-  
-  // アイテムリストに追加（一時的）
-  checklistItems.value.push(newItem)
-  
-  // 自動的に編集モードに入る
+  checklistItems.value.push({ id: newId, label: '' })
   await nextTick()
   await startEdit(newId)
 }
 
 // アイテムを削除
 const deleteItem = (id: string) => {
-  // 初期アイテムかどうかをチェック
   const isInitialItem = props.initialItems.some(item => item.id === id)
-  
   if (isInitialItem) {
-    // 初期アイテムの場合は確認ダイアログを表示
-    if (!confirm('初期項目を削除しますか？\n（削除しても初期項目は再読み込み時に復元できます）')) {
-      return
-    }
+    if (!confirm('初期項目を削除しますか？\n（削除しても初期項目は再読み込み時に復元できます）')) return
   } else {
-    // カスタムアイテムの場合も確認
-    if (!confirm('この項目を削除しますか？')) {
-      return
-    }
+    if (!confirm('この項目を削除しますか？')) return
   }
-  
-  // アイテムリストから削除
+
   checklistItems.value = checklistItems.value.filter(item => item.id !== id)
-  
-  // カスタムアイテムの場合はローカルストレージからも削除
+
   if (!isInitialItem) {
-    const customItems = loadCustomItems()
-    const updatedCustomItems = customItems.filter(item => item.id !== id)
-    saveCustomItems(updatedCustomItems)
+    const customItems = loadCustomItemsFromLS()
+    saveCustomItemsToLS(customItems.filter(item => item.id !== id))
   }
-  
-  // チェック状態を削除
+
   if (checkedItems.value[id]) {
     const newCheckedItems = { ...checkedItems.value }
     delete newCheckedItems[id]
     checkedItems.value = newCheckedItems
     localStorage.removeItem(`${props.checklistId}-${id}`)
   }
-  
-  // カスタムラベルを削除
+
   if (customLabels.value[id]) {
     const newCustomLabels = { ...customLabels.value }
     delete newCustomLabels[id]
     customLabels.value = newCustomLabels
     localStorage.removeItem(`${props.checklistId}-${id}-label`)
   }
-  
-  // 並び順を保存
-  saveItemOrder()
+
+  saveItemOrderToLS()
+  scheduleSaveToFirestore()
 }
 
 // 表示用のラベルを取得
@@ -310,42 +370,32 @@ const getDisplayLabel = (item: ChecklistItem): string => {
   return customLabels.value[item.id] || item.label
 }
 
-// 要素の実際の高さ（マージンを含む）を取得
 const getElementTotalHeight = (element: HTMLElement): number => {
   const height = element.offsetHeight
   const style = window.getComputedStyle(element)
-  const marginTop = parseFloat(style.marginTop)
-  const marginBottom = parseFloat(style.marginBottom)
-  return height + marginTop + marginBottom
+  return height + parseFloat(style.marginTop) + parseFloat(style.marginBottom)
 }
 
 // 長押し開始
 const handleTouchStart = (e: TouchEvent, itemId: string, index: number) => {
-  // 編集中の項目がある場合は長押しを無効化
   if (editingItemId.value !== null) return
-  
-  // 編集モードでない場合は長押しを無効化
   if (!isEditMode.value) return
-  
   if (!e.touches.length) return
-  
+
   dragStartY.value = e.touches[0].clientY
   dragCurrentY.value = e.touches[0].clientY
   dragItemIndex.value = index
-  
-  // ドラッグ開始タイマーを開始
+
   longPressTimer.value = window.setTimeout(() => {
     draggingItemId.value = itemId
     isDragging.value = true
   }, DRAG_START_DELAY)
 }
 
-// タッチ移動
 const handleTouchMove = (e: TouchEvent) => {
   if (!e.touches.length) return
-  
+
   if (!isDragging.value) {
-    // ドラッグ開始前に移動した場合はドラッグをキャンセル
     const moveDistance = Math.abs(e.touches[0].clientY - dragStartY.value)
     if (moveDistance > 10 && longPressTimer.value !== null) {
       window.clearTimeout(longPressTimer.value)
@@ -353,27 +403,19 @@ const handleTouchMove = (e: TouchEvent) => {
     }
     return
   }
-  
+
   e.preventDefault()
   dragCurrentY.value = e.touches[0].clientY
-  
-  // ドラッグ中の要素の視覚的な移動量を更新（指に追従させる）
   dragOffsetY.value = dragCurrentY.value - dragStartY.value
-  
-  // ドラッグ中の要素の位置を更新
+
   const currentIndex = checklistItems.value.findIndex(item => item.id === draggingItemId.value)
-  
   if (currentIndex === -1) return
-  
-  // 累積ドラッグ距離を計算
+
   const totalDragDistance = dragCurrentY.value - dragStartY.value
-  
-  // 実際のアイテムの高さを取得して、移動先のインデックスを計算
   let accumulatedHeight = 0
   let newIndex = dragItemIndex.value
-  
+
   if (totalDragDistance > 0) {
-    // 下方向へのドラッグ
     for (let i = dragItemIndex.value + 1; i < checklistItems.value.length; i++) {
       const itemElement = itemRefs.value[i]
       if (itemElement) {
@@ -387,7 +429,6 @@ const handleTouchMove = (e: TouchEvent) => {
       }
     }
   } else if (totalDragDistance < 0) {
-    // 上方向へのドラッグ
     for (let i = dragItemIndex.value - 1; i >= 0; i--) {
       const itemElement = itemRefs.value[i]
       if (itemElement) {
@@ -401,55 +442,43 @@ const handleTouchMove = (e: TouchEvent) => {
       }
     }
   }
-  
-  // インデックスが変わった場合、アイテムを入れ替え
+
   if (newIndex !== currentIndex) {
-    // 並べ替え前に高さの差分を計算（マージンを含む）
     let heightDiff = 0
     if (newIndex > currentIndex) {
-      // 下方向への移動：currentIndex と newIndex の間の要素の高さの合計
       for (let i = currentIndex + 1; i <= newIndex; i++) {
         const itemElement = itemRefs.value[i]
-        if (itemElement) {
-          heightDiff += getElementTotalHeight(itemElement)
-        }
+        if (itemElement) heightDiff += getElementTotalHeight(itemElement)
       }
     } else {
-      // 上方向への移動：newIndex と currentIndex の間の要素の高さの合計（負の値）
       for (let i = newIndex; i < currentIndex; i++) {
         const itemElement = itemRefs.value[i]
-        if (itemElement) {
-          heightDiff -= getElementTotalHeight(itemElement)
-        }
+        if (itemElement) heightDiff -= getElementTotalHeight(itemElement)
       }
     }
-    
+
     const items = [...checklistItems.value]
     const [draggedItem] = items.splice(currentIndex, 1)
     items.splice(newIndex, 0, draggedItem)
     checklistItems.value = items
-    
-    // 新しい位置を基準に更新
+
     dragStartY.value = dragStartY.value + heightDiff
     dragItemIndex.value = newIndex
     dragOffsetY.value = dragCurrentY.value - dragStartY.value
   }
 }
 
-// タッチ終了
 const handleTouchEnd = () => {
-  // ドラッグ開始タイマーをクリア
   if (longPressTimer.value !== null) {
     window.clearTimeout(longPressTimer.value)
     longPressTimer.value = null
   }
-  
-  // ドラッグ中だった場合、並び順を保存
+
   if (isDragging.value) {
-    saveItemOrder()
+    saveItemOrderToLS()
+    scheduleSaveToFirestore()
   }
-  
-  // 状態をリセット
+
   draggingItemId.value = null
   isDragging.value = false
   dragItemIndex.value = -1
@@ -458,7 +487,6 @@ const handleTouchEnd = () => {
   dragOffsetY.value = 0
 }
 
-// タッチキャンセル
 const handleTouchCancel = () => {
   handleTouchEnd()
 }
@@ -471,39 +499,30 @@ const handleReset = () => {
     localStorage.removeItem(`${props.checklistId}-${item.id}`)
   })
   checkedItems.value = resetState
+  scheduleSaveToFirestore()
 }
 
-// 完了数を計算
-const completedCount = computed(() => 
+const completedCount = computed(() =>
   Object.values(checkedItems.value).filter(Boolean).length
 )
 const totalCount = computed(() => checklistItems.value.length)
-
-// isActiveのcomputed版を作成
 const isActiveComputed = computed(() => props.isActive)
 
-// 統計情報が変更されたときに親コンポーネントに通知
 watch([completedCount, totalCount, isActiveComputed], () => {
   if (props.isActive) {
     emit('update:stats', { completedCount: completedCount.value, totalCount: totalCount.value })
   }
 }, { immediate: true })
 
-// 編集モードを有効化
 const enableEditMode = () => {
   isEditMode.value = true
 }
 
-// 編集モードを無効化
 const disableEditMode = () => {
   isEditMode.value = false
-  // 編集中の項目があればキャンセル
-  if (editingItemId.value !== null) {
-    cancelEdit()
-  }
+  if (editingItemId.value !== null) cancelEdit()
 }
 
-// リセット機能と編集モード制御を外部に公開
 defineExpose({
   handleReset,
   enableEditMode,
@@ -518,8 +537,8 @@ defineExpose({
         v-for="(item, index) in checklistItems"
         :key="item.id"
         :ref="el => { itemRefs[index] = el ? (el as HTMLElement) : null }"
-        :class="['checklist-item', { 
-          checked: checkedItems[item.id], 
+        :class="['checklist-item', {
+          checked: checkedItems[item.id],
           editing: editingItemId === item.id,
           dragging: draggingItemId === item.id
         }]"
@@ -529,9 +548,9 @@ defineExpose({
         @touchend="handleTouchEnd"
         @touchcancel="handleTouchCancel"
       >
-        <label 
+        <label
           v-if="editingItemId !== item.id"
-          :for="item.id" 
+          :for="item.id"
           @click.prevent="!isEditMode && handleCheckChange(item.id)"
         >
           {{ getDisplayLabel(item) }}
@@ -566,7 +585,7 @@ defineExpose({
             </svg>
           </button>
         </div>
-        
+
         <div v-if="editingItemId === item.id" class="edit-mode">
           <input
             :ref="setEditInputRef"
@@ -634,12 +653,12 @@ defineExpose({
   border-radius: 10px;
   transition: all 0.3s ease;
   cursor: pointer;
-  touch-action: none; /* ブラウザのデフォルトタッチ動作を無効化 */
-  user-select: none; /* 長押し時のテキスト選択を防止 */
-  -webkit-user-select: none; /* Safari用 */
-  -moz-user-select: none; /* Firefox用 */
-  -webkit-touch-callout: none; /* iOS用：長押しメニューを無効化 */
-  -webkit-tap-highlight-color: transparent; /* タップ時のハイライトを無効化 */
+  touch-action: none;
+  user-select: none;
+  -webkit-user-select: none;
+  -moz-user-select: none;
+  -webkit-touch-callout: none;
+  -webkit-tap-highlight-color: transparent;
   min-height: 46px;
   box-sizing: border-box;
 }
@@ -648,8 +667,7 @@ defineExpose({
   opacity: 0.9;
   box-shadow: 0 8px 16px rgba(0, 0, 0, 0.3);
   z-index: 1000;
-  transition: none; /* ドラッグ中はトランジションを無効化 */
-  /* transformはインラインスタイルで動的に適用されます */
+  transition: none;
 }
 
 .checklist-item.checked {
@@ -694,8 +712,8 @@ defineExpose({
   user-select: none;
   -webkit-user-select: none;
   -moz-user-select: none;
-  -webkit-touch-callout: none; /* iOS用：長押しメニューを無効化 */
-  -webkit-tap-highlight-color: transparent; /* タップ時のハイライトを無効化 */
+  -webkit-touch-callout: none;
+  -webkit-tap-highlight-color: transparent;
 }
 
 .checklist-item.editing {
@@ -822,7 +840,7 @@ defineExpose({
   border-radius: 5px;
   font-size: 1em;
   outline: none;
-  user-select: text; /* 編集時はテキスト選択を許可 */
+  user-select: text;
   -webkit-user-select: text;
   -moz-user-select: text;
   box-sizing: border-box;

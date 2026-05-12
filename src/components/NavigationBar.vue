@@ -1,5 +1,6 @@
 <script setup lang="ts">
 import { ref, watch, nextTick } from 'vue'
+import type { User } from 'firebase/auth'
 
 // ナビゲーション項目の型定義
 export interface NavItem {
@@ -9,9 +10,10 @@ export interface NavItem {
 
 // Props定義
 interface Props {
-  activeItem: string  // 必須プロパティ：現在アクティブなチェックリストのID
+  activeItem: string
   navItems: NavItem[]
-  isEditMode?: boolean  // 編集モードかどうか
+  isEditMode?: boolean
+  user?: User | null
 }
 
 // Emits定義
@@ -19,10 +21,12 @@ interface Emits {
   (e: 'nav-change', id: string): void
   (e: 'add-checklist'): void
   (e: 'update-checklist-name', id: string, newName: string): void
+  (e: 'sign-out'): void
 }
 
 const props = withDefaults(defineProps<Props>(), {
-  isEditMode: false
+  isEditMode: false,
+  user: null
 })
 
 const emit = defineEmits<Emits>()
@@ -110,6 +114,22 @@ watch(() => props.activeItem, async () => {
           title="新しいチェックリストを追加"
         >
           ＋
+        </button>
+        <button
+          v-if="props.user"
+          class="user-button"
+          @click="emit('sign-out')"
+          :title="`${props.user.displayName ?? props.user.email} としてログイン中 — タップしてサインアウト`"
+        >
+          <img
+            v-if="props.user.photoURL"
+            :src="props.user.photoURL"
+            :alt="props.user.displayName ?? 'user'"
+            class="user-avatar"
+          />
+          <span v-else class="user-avatar-fallback">
+            {{ (props.user.displayName ?? props.user.email ?? '?')[0].toUpperCase() }}
+          </span>
         </button>
       </template>
     </div>
@@ -208,6 +228,46 @@ watch(() => props.activeItem, async () => {
 .add-button:hover {
   background: #f0f3ff;
   transform: scale(1.05);
+}
+
+.user-button {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 4px;
+  background: none;
+  border: none;
+  border-radius: 50%;
+  cursor: pointer;
+  flex-shrink: 0;
+  -webkit-tap-highlight-color: transparent;
+  transition: opacity 0.2s ease;
+}
+
+.user-button:hover {
+  opacity: 0.8;
+}
+
+.user-avatar {
+  width: 28px;
+  height: 28px;
+  border-radius: 50%;
+  object-fit: cover;
+  border: 2px solid #667eea;
+}
+
+.user-avatar-fallback {
+  width: 28px;
+  height: 28px;
+  border-radius: 50%;
+  background: #667eea;
+  color: white;
+  font-size: 14px;
+  font-weight: 600;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  border: 2px solid #667eea;
 }
 
 .edit-name-container {

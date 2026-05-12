@@ -2,19 +2,17 @@
 import { ref, computed, onMounted, onBeforeUnmount, watch } from 'vue'
 import NavigationBar, { type NavItem } from './components/NavigationBar.vue'
 import GenericChecklist from './components/GenericChecklist.vue'
+import LoginView from './components/LoginView.vue'
+import { useAuth } from './composables/useAuth'
+import {
+  subscribeChecklistsConfig,
+  saveChecklistsConfig,
+  deleteChecklistData,
+  type ChecklistConfig
+} from './firebase/firestore'
+import type { Unsubscribe } from 'firebase/firestore'
 
-// チェックリスト設定の型定義
-interface ChecklistConfig {
-  id: string
-  label: string
-  initialItems: ChecklistItem[]
-}
-
-// チェックリスト項目の型定義
-interface ChecklistItem {
-  id: string
-  label: string
-}
+const { user, authLoading, signOut } = useAuth()
 
 // デフォルトのチェックリスト設定
 const defaultChecklists: ChecklistConfig[] = [
@@ -50,67 +48,116 @@ const defaultChecklists: ChecklistConfig[] = [
   }
 ]
 
-// チェックリストの設定を管理
 const checklists = ref<ChecklistConfig[]>([])
-
-// アクティブなビューの管理
 const activeView = ref<string>('')
-
-// コンポーネントのrefを管理（動的に生成）
 const checklistRefs = ref<Record<string, InstanceType<typeof GenericChecklist> | null>>({})
-
-// 統計情報の管理
 const stats = ref<{ completedCount: number; totalCount: number }>({
   completedCount: 0,
   totalCount: 0
 })
-
-// 編集モードの管理
 const isEditMode = ref<boolean>(false)
 
+// Firestoreリスナーのアンサブスクライブ関数
+let configUnsubscribe: Unsubscribe | null = null
+// Firestore書き込み中フラグ（無限ループ防止）
+let isSavingToFirestore = false
+// Firestoreから受信した最新データのJSON（重複書き込み防止）
+let lastFirestoreJson = ''
+
 // ローカルストレージからチェックリスト設定を読み込む
-const loadChecklists = () => {
+const loadFromLocalStorage = () => {
   const saved = localStorage.getItem('checklists-config')
   if (saved) {
     try {
       const parsed = JSON.parse(saved)
       checklists.value = parsed
-      // アクティブビューを最初のチェックリストに設定
       if (checklists.value.length > 0) {
         activeView.value = checklists.value[0].id
       }
-    } catch (e) {
-      console.error('Failed to load checklists config:', e)
+    } catch {
       checklists.value = [...defaultChecklists]
       activeView.value = checklists.value[0].id
     }
   } else {
-    // 初回起動時はデフォルトを使用
     checklists.value = [...defaultChecklists]
     activeView.value = checklists.value[0].id
-    saveChecklists()
+    localStorage.setItem('checklists-config', JSON.stringify(checklists.value))
   }
 }
 
-// チェックリスト設定をローカルストレージに保存
-const saveChecklists = () => {
+const saveToLocalStorage = () => {
   localStorage.setItem('checklists-config', JSON.stringify(checklists.value))
 }
 
-// チェックリスト設定が変更されたら保存
+// Firestoreにチェックリスト設定を保存
+const saveToFirestore = async (uid: string) => {
+  const json = JSON.stringify(checklists.value)
+  if (json === lastFirestoreJson) return
+  isSavingToFirestore = true
+  try {
+    await saveChecklistsConfig(uid, checklists.value)
+    lastFirestoreJson = json
+  } finally {
+    isSavingToFirestore = false
+  }
+}
+
+// Firestoreのリアルタイム購読を開始
+const startFirestoreSync = (uid: string) => {
+  stopFirestoreSync()
+  configUnsubscribe = subscribeChecklistsConfig(uid, (remoteChecklists) => {
+    if (isSavingToFirestore) return
+
+    if (remoteChecklists) {
+      const json = JSON.stringify(remoteChecklists)
+      if (json === lastFirestoreJson) return
+      lastFirestoreJson = json
+      checklists.value = remoteChecklists
+      // activeView が存在しなければ先頭に設定
+      if (!checklists.value.find(c => c.id === activeView.value) && checklists.value.length > 0) {
+        activeView.value = checklists.value[0].id
+      }
+    } else {
+      // Firestoreにデータがない場合、ローカルストレージのデータをアップロード
+      saveToFirestore(uid)
+    }
+  })
+}
+
+const stopFirestoreSync = () => {
+  if (configUnsubscribe) {
+    configUnsubscribe()
+    configUnsubscribe = null
+  }
+}
+
+// 認証状態が変わったときの処理
+watch(user, (newUser, oldUser) => {
+  if (newUser) {
+    // ログイン時：Firestoreの購読を開始
+    startFirestoreSync(newUser.uid)
+  } else if (oldUser && !newUser) {
+    // ログアウト時：Firestoreの購読を停止してローカルストレージから読み込み
+    stopFirestoreSync()
+    lastFirestoreJson = ''
+    loadFromLocalStorage()
+  }
+})
+
+// チェックリスト設定が変わったらどちらにも保存
 watch(checklists, () => {
-  saveChecklists()
+  saveToLocalStorage()
+  if (user.value && !isSavingToFirestore) {
+    saveToFirestore(user.value.uid)
+  }
 }, { deep: true })
 
-// フッター要素の ref と ResizeObserver
 const bottomBarEl = ref<HTMLElement | null>(null)
 let bottomBarObserver: ResizeObserver | null = null
 
-// コンポーネントマウント時にチェックリストを読み込む
 onMounted(() => {
-  loadChecklists()
+  loadFromLocalStorage()
 
-  // フッターの実際の高さを CSS 変数に反映し、view-container の bottom を動的に設定する
   if (bottomBarEl.value) {
     const applyHeight = () => {
       if (bottomBarEl.value) {
@@ -128,30 +175,24 @@ onMounted(() => {
 
 onBeforeUnmount(() => {
   bottomBarObserver?.disconnect()
+  stopFirestoreSync()
 })
 
-// ナビゲーション項目を計算
-const navItems = computed<NavItem[]>(() => 
+const navItems = computed<NavItem[]>(() =>
   checklists.value.map(c => ({ id: c.id, label: c.label }))
 )
 
-// 統計情報の更新ハンドラー
 const handleStatsUpdate = (newStats: { completedCount: number; totalCount: number }) => {
   stats.value = newStats
 }
 
-// リセットボタンのハンドラー
 const handleReset = () => {
   const ref = checklistRefs.value[activeView.value]
-  if (ref) {
-    ref.handleReset()
-  }
+  if (ref) ref.handleReset()
 }
 
-// 編集ボタンのハンドラー
 const handleEdit = () => {
   isEditMode.value = !isEditMode.value
-  
   const ref = checklistRefs.value[activeView.value]
   if (ref) {
     if (isEditMode.value) {
@@ -162,100 +203,85 @@ const handleEdit = () => {
   }
 }
 
-// ビュー切り替え時に編集モードをリセット
 const handleNavChangeWithEditReset = (viewId: string) => {
-  // 編集モードをオフにする
   if (isEditMode.value) {
     const currentRef = checklistRefs.value[activeView.value]
-    if (currentRef) {
-      currentRef.disableEditMode()
-    }
+    if (currentRef) currentRef.disableEditMode()
     isEditMode.value = false
   }
-  
-  // 元のナビゲーション処理を実行
   handleNavChange(viewId)
 }
 
-// 現在のインデックスを計算
-const currentIndex = computed(() => 
+const currentIndex = computed(() =>
   checklists.value.findIndex(c => c.id === activeView.value)
 )
 
-// ナビゲーション変更ハンドラー
 const handleNavChange = (viewId: string) => {
   activeView.value = viewId
-  // ナビゲーション変更時はスライドオフセットをリセット
   translateX.value = 0
   isTransitioning.value = false
 }
 
-// リセットまたはリスト削除ボタンのハンドラー
 const handleResetOrDelete = () => {
   if (isEditMode.value) {
-    // 編集モード時はリストを削除
     handleDeleteChecklist(activeView.value)
   } else {
-    // 通常モード時はリセット
     handleReset()
   }
 }
+
 const handleAddChecklist = () => {
   const name = prompt('新しいチェックリストの名前を入力してください：')
   if (!name || !name.trim()) return
-  
+
   const newId = `checklist-${Date.now()}`
   const newChecklist: ChecklistConfig = {
     id: newId,
     label: name.trim(),
     initialItems: []
   }
-  
   checklists.value.push(newChecklist)
-  // 新しいチェックリストに切り替え
   activeView.value = newId
 }
 
-// チェックリストを削除
 const handleDeleteChecklist = (id: string) => {
   if (checklists.value.length <= 1) {
     alert('最後のチェックリストは削除できません')
     return
   }
-  
+
   const checklist = checklists.value.find(c => c.id === id)
   if (!checklist) return
-  
+
   if (!confirm(`「${checklist.label}」を削除しますか？\n\n注意: チェックリスト内のすべてのデータが削除されます。`)) {
     return
   }
-  
-  // チェックリストを削除
+
   const index = checklists.value.findIndex(c => c.id === id)
   checklists.value.splice(index, 1)
-  
-  // ローカルストレージからチェックリストデータを削除
-  // カスタムアイテム
+
+  // ローカルストレージから削除
   localStorage.removeItem(`${id}-custom-items`)
-  // 並び順
   localStorage.removeItem(`${id}-order`)
-  
-  // アクティブビューが削除されたチェックリストだった場合、最初のチェックリストに切り替え
+
+  // Firestoreからも削除
+  if (user.value) {
+    deleteChecklistData(user.value.uid, id).catch(console.error)
+  }
+
   if (activeView.value === id) {
     activeView.value = checklists.value[0].id
   }
 }
 
-// チェックリスト名を更新
 const handleUpdateChecklistName = (id: string, newName: string) => {
   const checklist = checklists.value.find(c => c.id === id)
   if (checklist) {
     checklist.label = newName
-    // チェックリスト設定の変更がwatchで自動的に保存される
   }
 }
 
-// スワイプ機能の実装
+// スワイプ機能
 const touchStartX = ref<number>(0)
 const touchStartY = ref<number>(0)
 const touchCurrentX = ref<number>(0)
@@ -264,16 +290,13 @@ const translateX = ref<number>(0)
 const isTransitioning = ref<boolean>(false)
 const isSwiping = ref<boolean>(false)
 const swipeDirection = ref<'horizontal' | 'vertical' | null>(null)
-const swipeThreshold = 100 // 画面遷移を確定するしきい値（ピクセル）
-const directionThreshold = 10 // スワイプ方向を判定するしきい値（ピクセル）
-const edgeResistance = 0.3 // 端での抵抗感の係数
-const transitionDuration = 300 // トランジション時間（ミリ秒）
+const swipeThreshold = 100
+const directionThreshold = 10
+const edgeResistance = 0.3
+const transitionDuration = 300
 
-// タッチ開始イベント
 const handleTouchStart = (e: TouchEvent) => {
-  // 編集モード中は横スワイプを無効化
   if (isEditMode.value) return
-  
   if (e.touches.length > 0) {
     touchStartX.value = e.touches[0].clientX
     touchStartY.value = e.touches[0].clientY
@@ -285,26 +308,18 @@ const handleTouchStart = (e: TouchEvent) => {
   }
 }
 
-// スワイプ方向を判定する関数
 const determineSwipeDirection = (diffX: number, diffY: number, threshold: number): 'horizontal' | 'vertical' | null => {
   const absDiffX = Math.abs(diffX)
   const absDiffY = Math.abs(diffY)
-
-  // 十分な移動量がある場合にのみ方向を判定
   const totalMovement = Math.hypot(absDiffX, absDiffY)
   if (totalMovement > threshold) {
-    // 横方向の移動が縦方向より大きい場合は横スワイプ
     return absDiffX > absDiffY ? 'horizontal' : 'vertical'
   }
-
   return null
 }
 
-// タッチ移動イベント - リアルタイムでスライド
 const handleTouchMove = (e: TouchEvent) => {
-  // 編集モード中は横スワイプを無効化
   if (isEditMode.value) return
-  
   if (!isSwiping.value || e.touches.length === 0) return
 
   touchCurrentX.value = e.touches[0].clientX
@@ -313,27 +328,17 @@ const handleTouchMove = (e: TouchEvent) => {
   const diffX = touchCurrentX.value - touchStartX.value
   const diffY = touchCurrentY.value - touchStartY.value
 
-  // スワイプ方向がまだ判定されていない場合、判定する
   if (swipeDirection.value === null) {
     swipeDirection.value = determineSwipeDirection(diffX, diffY, directionThreshold)
   }
 
-  // 縦スクロールの場合は、スワイプ処理をスキップ
-  if (swipeDirection.value === 'vertical') {
-    return
-  }
+  if (swipeDirection.value === 'vertical') return
 
-  // 横スワイプの場合のみ、スライド処理を実行
   if (swipeDirection.value === 'horizontal') {
-    // 横スワイプの場合は縦スクロールを防止
     e.preventDefault()
-
     const currentIdx = currentIndex.value
-
-    // 端の画面では逆方向のスワイプを制限
     if ((currentIdx === 0 && diffX > 0) ||
         (currentIdx === checklists.value.length - 1 && diffX < 0)) {
-      // 端での抵抗感を表現（スワイプ量を減衰）
       translateX.value = diffX * edgeResistance
     } else {
       translateX.value = diffX
@@ -341,24 +346,19 @@ const handleTouchMove = (e: TouchEvent) => {
   }
 }
 
-// スワイプ状態をリセットするヘルパー関数
 const resetSwipeState = () => {
   isSwiping.value = false
   swipeDirection.value = null
   translateX.value = 0
 }
 
-// タッチ終了イベント
 const handleTouchEnd = () => {
-  // 編集モード中は横スワイプを無効化
   if (isEditMode.value) {
     isSwiping.value = false
     return
   }
-  
   if (!isSwiping.value) return
 
-  // 縦スクロールの場合は、スワイプ処理をスキップ
   if (swipeDirection.value === 'vertical') {
     resetSwipeState()
     return
@@ -369,22 +369,16 @@ const handleTouchEnd = () => {
 
   isTransitioning.value = true
 
-  // 横スワイプの場合のみ、画面遷移を実行
   if (swipeDirection.value === 'horizontal') {
-    // 右スワイプ（前の画面へ）
     if (swipeDistance > swipeThreshold && currentIdx > 0) {
       activeView.value = checklists.value[currentIdx - 1].id
-    }
-    // 左スワイプ（次の画面へ）
-    else if (swipeDistance < -swipeThreshold && currentIdx < checklists.value.length - 1) {
+    } else if (swipeDistance < -swipeThreshold && currentIdx < checklists.value.length - 1) {
       activeView.value = checklists.value[currentIdx + 1].id
     }
   }
 
-  // スワイプ状態をリセット
   resetSwipeState()
 
-  // トランジション完了後にフラグをリセット
   setTimeout(() => {
     isTransitioning.value = false
   }, transitionDuration)
@@ -392,7 +386,17 @@ const handleTouchEnd = () => {
 </script>
 
 <template>
+  <!-- ローディング中 -->
+  <div v-if="authLoading" class="loading-screen">
+    <div class="loading-spinner"></div>
+  </div>
+
+  <!-- 未ログイン -->
+  <LoginView v-else-if="!user" />
+
+  <!-- ログイン済み -->
   <div
+    v-else
     class="app"
     @touchstart="handleTouchStart"
     @touchmove="handleTouchMove"
@@ -402,9 +406,11 @@ const handleTouchEnd = () => {
       :active-item="activeView"
       :nav-items="navItems"
       :is-edit-mode="isEditMode"
+      :user="user"
       @nav-change="handleNavChangeWithEditReset"
       @add-checklist="handleAddChecklist"
       @update-checklist-name="handleUpdateChecklistName"
+      @sign-out="signOut"
     />
     <div class="view-container">
       <div
@@ -424,6 +430,7 @@ const handleTouchEnd = () => {
             :checklist-id="checklist.id"
             :initial-items="checklist.initialItems"
             :is-active="activeView === checklist.id"
+            :uid="user.uid"
             @update:stats="handleStatsUpdate"
           />
         </div>
@@ -434,15 +441,15 @@ const handleTouchEnd = () => {
         {{ stats.completedCount }} / {{ stats.totalCount }} 完了
       </div>
       <div class="button-group">
-        <button 
+        <button
           class="edit-button"
           :class="{ active: isEditMode }"
           @click="handleEdit"
         >
           {{ isEditMode ? '編集完了' : '項目を編集' }}
         </button>
-        <button 
-          :class="isEditMode ? 'delete-list-button' : 'reset-button'" 
+        <button
+          :class="isEditMode ? 'delete-list-button' : 'reset-button'"
           @click="handleResetOrDelete"
         >
           {{ isEditMode ? 'リストを削除' : 'すべてリセット' }}
@@ -453,31 +460,52 @@ const handleTouchEnd = () => {
 </template>
 
 <style scoped>
+/* ローディング画面 */
+.loading-screen {
+  height: 100dvh;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+}
+
+.loading-spinner {
+  width: 48px;
+  height: 48px;
+  border: 4px solid rgba(255, 255, 255, 0.3);
+  border-top-color: white;
+  border-radius: 50%;
+  animation: spin 0.8s linear infinite;
+}
+
+@keyframes spin {
+  to { transform: rotate(360deg); }
+}
+
 .app {
   height: 100dvh;
   display: flex;
   flex-direction: column;
   overflow-x: hidden;
-  touch-action: pan-y; /* 垂直スクロールのみを許可 */
+  touch-action: pan-y;
   position: relative;
-  /* ナビゲーションバーの高さを定義 */
   --nav-bar-height: calc(6px + env(safe-area-inset-top) + 10px + 14px + 10px + 6px);
 }
 
 .view-container {
   position: absolute;
-  top: var(--nav-bar-height); /* ナビゲーションバーの直下から開始 */
+  top: var(--nav-bar-height);
   bottom: var(--bottom-bar-height, 100px);
   left: 0;
   right: 0;
   display: flex;
   justify-content: flex-start;
   align-items: stretch;
-  overflow-x: hidden; /* 横スクロールは無効 */
-  overflow-y: auto; /* 縦スクロールを有効化 */
-  user-select: none; /* スワイプ時のテキスト選択を防止 */
-  -webkit-user-select: none; /* Safari用 */
-  -moz-user-select: none; /* Firefox用 */
+  overflow-x: hidden;
+  overflow-y: auto;
+  user-select: none;
+  -webkit-user-select: none;
+  -moz-user-select: none;
 }
 
 .view-slider {
@@ -494,12 +522,11 @@ const handleTouchEnd = () => {
   align-items: flex-start;
   padding: 20px;
   box-sizing: border-box;
-  min-height: 100%; /* 最小高さを100%に設定 */
+  min-height: 100%;
 }
 
 @media (max-width: 600px) {
   .app {
-    /* スマートフォン用のナビゲーションバーの高さ */
     --nav-bar-height: calc(6px + env(safe-area-inset-top) + 8px + 13px + 8px + 6px);
   }
 
@@ -516,7 +543,7 @@ const handleTouchEnd = () => {
   background: white;
   box-shadow: 0 -4px 20px rgba(0, 0, 0, 0.15);
   padding: 15px 20px calc(15px + env(safe-area-inset-bottom, 0px));
-  z-index: 1001; /* ナビゲーションバーよりも上に配置 */
+  z-index: 1001;
 }
 
 .progress {
@@ -541,11 +568,9 @@ const handleTouchEnd = () => {
   font-size: 1.1em;
   cursor: pointer;
   transition: all 0.3s ease;
-  /* 文字選択を無効化 */
   user-select: none;
   -webkit-user-select: none;
   -moz-user-select: none;
-  /* 押下時のハイライトを無効化 */
   -webkit-tap-highlight-color: transparent;
 }
 
@@ -579,11 +604,9 @@ const handleTouchEnd = () => {
   transition: all 0.3s ease;
   background: #dc3545;
   color: white;
-  /* 文字選択を無効化 */
   user-select: none;
   -webkit-user-select: none;
   -moz-user-select: none;
-  /* 押下時のハイライトを無効化 */
   -webkit-tap-highlight-color: transparent;
 }
 
