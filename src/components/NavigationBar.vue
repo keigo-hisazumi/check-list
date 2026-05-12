@@ -208,42 +208,47 @@ watch(() => props.activeItem, async () => {
 }
 
 .action-bar {
-  padding: 10px 20px 15px;
+  padding: 8px 20px 12px;
   border-top: 1px solid #f0f0f0;
+  display: flex;
+  align-items: center;
+  gap: 10px;
 }
 
 .progress {
-  text-align: center;
-  font-size: 1.2em;
+  font-size: 0.95em;
   color: #667eea;
   font-weight: bold;
-  margin-bottom: 10px;
+  white-space: nowrap;
+  flex-shrink: 0;
 }
 
 .button-group {
   display: flex;
-  gap: 10px;
+  gap: 8px;
+  flex: 1;
+  justify-content: flex-end;
 }
 
 .edit-button,
 .reset-button {
-  flex: 1;
-  padding: 15px;
+  padding: 6px 12px;
   border: none;
-  border-radius: 10px;
-  font-size: 1.1em;
+  border-radius: 8px;
+  font-size: 0.85em;
   cursor: pointer;
   transition: all 0.3s ease;
   user-select: none;
   -webkit-user-select: none;
   -moz-user-select: none;
   -webkit-tap-highlight-color: transparent;
+  white-space: nowrap;
 }
 
 .edit-button {
   background: #f0f0f0;
   color: #667eea;
-  border: 2px solid #667eea;
+  border: 1.5px solid #667eea;
 }
 
 .edit-button:hover {
@@ -261,11 +266,10 @@ watch(() => props.activeItem, async () => {
 }
 
 .delete-list-button {
-  flex: 1;
-  padding: 15px;
+  padding: 6px 12px;
   border: none;
-  border-radius: 10px;
-  font-size: 1.1em;
+  border-radius: 8px;
+  font-size: 0.85em;
   cursor: pointer;
   transition: all 0.3s ease;
   background: #dc3545;
@@ -274,6 +278,7 @@ watch(() => props.activeItem, async () => {
   -webkit-user-select: none;
   -moz-user-select: none;
   -webkit-tap-highlight-color: transparent;
+  white-space: nowrap;
 }
 
 .delete-list-button:hover {
@@ -529,17 +534,16 @@ watch(() => props.activeItem, async () => {
   .edit-button,
   .reset-button,
   .delete-list-button {
-    padding: 12px;
-    font-size: 1em;
+    padding: 5px 10px;
+    font-size: 0.8em;
   }
 
   .progress {
-    font-size: 1.1em;
-    margin-bottom: 8px;
+    font-size: 0.9em;
   }
 
   .button-group {
-    gap: 8px;
+    gap: 6px;
   }
 }
 </style>
