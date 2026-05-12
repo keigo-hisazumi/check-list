@@ -99,26 +99,6 @@ watch(() => props.activeItem, async () => {
 
 <template>
   <nav class="navigation-bar">
-    <div class="action-bar">
-      <div class="progress">
-        {{ props.stats.completedCount }} / {{ props.stats.totalCount }} 完了
-      </div>
-      <div class="button-group">
-        <button
-          class="edit-button"
-          :class="{ active: props.isEditMode }"
-          @click="handleEdit"
-        >
-          {{ props.isEditMode ? '編集完了' : '項目を編集' }}
-        </button>
-        <button
-          :class="props.isEditMode ? 'delete-list-button' : 'reset-button'"
-          @click="handleResetOrDelete"
-        >
-          {{ props.isEditMode ? 'リストを削除' : 'すべてリセット' }}
-        </button>
-      </div>
-    </div>
     <div class="nav-scroll-container">
       <!-- 編集モードの場合は入力フィールドを表示 -->
       <div v-if="props.isEditMode" class="edit-name-container">
@@ -190,6 +170,26 @@ watch(() => props.activeItem, async () => {
         </div>
       </template>
     </div>
+    <div class="action-bar">
+      <div class="progress">
+        {{ props.stats.completedCount }} / {{ props.stats.totalCount }} 完了
+      </div>
+      <div class="button-group">
+        <button
+          class="edit-button"
+          :class="{ active: props.isEditMode }"
+          @click="handleEdit"
+        >
+          {{ props.isEditMode ? '編集完了' : '項目を編集' }}
+        </button>
+        <button
+          :class="props.isEditMode ? 'delete-list-button' : 'reset-button'"
+          @click="handleResetOrDelete"
+        >
+          {{ props.isEditMode ? 'リストを削除' : 'すべてリセット' }}
+        </button>
+      </div>
+    </div>
   </nav>
 </template>
 
@@ -208,8 +208,8 @@ watch(() => props.activeItem, async () => {
 }
 
 .action-bar {
-  padding: 15px 20px 10px;
-  border-bottom: 1px solid #f0f0f0;
+  padding: 10px 20px 15px;
+  border-top: 1px solid #f0f0f0;
 }
 
 .progress {
@@ -499,7 +499,7 @@ watch(() => props.activeItem, async () => {
 
 @media (max-width: 600px) {
   .action-bar {
-    padding: 12px 16px 8px;
+    padding: 8px 16px 12px;
   }
 
   .nav-scroll-container {
