@@ -12,6 +12,7 @@ interface Props {
   navItems: NavItem[]
   isEditMode?: boolean
   user?: User | null
+  stats?: { completedCount: number; totalCount: number }
 }
 
 interface Emits {
@@ -19,11 +20,14 @@ interface Emits {
   (e: 'add-checklist'): void
   (e: 'update-checklist-name', id: string, newName: string): void
   (e: 'sign-out'): void
+  (e: 'edit'): void
+  (e: 'reset-or-delete'): void
 }
 
 const props = withDefaults(defineProps<Props>(), {
   isEditMode: false,
-  user: null
+  user: null,
+  stats: () => ({ completedCount: 0, totalCount: 0 })
 })
 
 const emit = defineEmits<Emits>()
@@ -51,6 +55,14 @@ const closeMenu = () => {
 const handleSignOut = () => {
   isMenuOpen.value = false
   emit('sign-out')
+}
+
+const handleEdit = () => {
+  emit('edit')
+}
+
+const handleResetOrDelete = () => {
+  emit('reset-or-delete')
 }
 
 watch(() => props.isEditMode, async (newValue) => {
@@ -158,8 +170,29 @@ watch(() => props.activeItem, async () => {
         </div>
       </template>
     </div>
+    <div class="action-bar">
+      <div class="progress">
+        {{ props.stats.completedCount }} / {{ props.stats.totalCount }} 完了
+      </div>
+      <div class="button-group">
+        <button
+          class="edit-button"
+          :class="{ active: props.isEditMode }"
+          @click="handleEdit"
+        >
+          {{ props.isEditMode ? '編集完了' : '項目を編集' }}
+        </button>
+        <button
+          :class="props.isEditMode ? 'delete-list-button' : 'reset-button'"
+          @click="handleResetOrDelete"
+        >
+          {{ props.isEditMode ? 'リストを削除' : 'すべてリセット' }}
+        </button>
+      </div>
+    </div>
   </nav>
 </template>
+
 
 <style scoped>
 .navigation-bar {
@@ -172,7 +205,84 @@ watch(() => props.activeItem, async () => {
   z-index: 1000;
   -webkit-backdrop-filter: blur(10px);
   backdrop-filter: blur(10px);
-  --nav-bar-height: calc(6px + env(safe-area-inset-top) + 10px + 14px + 10px + 6px);
+}
+
+.action-bar {
+  padding: 8px 20px 12px;
+  border-top: 1px solid #f0f0f0;
+  display: flex;
+  align-items: center;
+  gap: 10px;
+}
+
+.progress {
+  font-size: 0.95em;
+  color: #667eea;
+  font-weight: bold;
+  white-space: nowrap;
+  flex-shrink: 0;
+}
+
+.button-group {
+  display: flex;
+  gap: 8px;
+  flex: 1;
+  justify-content: flex-end;
+}
+
+.edit-button,
+.reset-button {
+  padding: 6px 12px;
+  border: none;
+  border-radius: 8px;
+  font-size: 0.85em;
+  cursor: pointer;
+  transition: all 0.3s ease;
+  user-select: none;
+  -webkit-user-select: none;
+  -moz-user-select: none;
+  -webkit-tap-highlight-color: transparent;
+  white-space: nowrap;
+}
+
+.edit-button {
+  background: #f0f0f0;
+  color: #667eea;
+  border: 1.5px solid #667eea;
+}
+
+.edit-button:hover {
+  background: #e0e0f0;
+}
+
+.edit-button.active {
+  background: #667eea;
+  color: white;
+}
+
+.reset-button {
+  background: #667eea;
+  color: white;
+}
+
+.delete-list-button {
+  padding: 6px 12px;
+  border: none;
+  border-radius: 8px;
+  font-size: 0.85em;
+  cursor: pointer;
+  transition: all 0.3s ease;
+  background: #dc3545;
+  color: white;
+  user-select: none;
+  -webkit-user-select: none;
+  -moz-user-select: none;
+  -webkit-tap-highlight-color: transparent;
+  white-space: nowrap;
+}
+
+.delete-list-button:hover {
+  background: #c82333;
 }
 
 .nav-scroll-container {
@@ -393,8 +503,8 @@ watch(() => props.activeItem, async () => {
 }
 
 @media (max-width: 600px) {
-  .navigation-bar {
-    --nav-bar-height: calc(6px + env(safe-area-inset-top) + 8px + 13px + 8px + 6px);
+  .action-bar {
+    padding: 8px 16px 12px;
   }
 
   .nav-scroll-container {
@@ -419,6 +529,21 @@ watch(() => props.activeItem, async () => {
     font-size: 13px;
     padding: 6px 10px;
     min-width: 120px;
+  }
+
+  .edit-button,
+  .reset-button,
+  .delete-list-button {
+    padding: 5px 10px;
+    font-size: 0.8em;
+  }
+
+  .progress {
+    font-size: 0.9em;
+  }
+
+  .button-group {
+    gap: 6px;
   }
 }
 </style>

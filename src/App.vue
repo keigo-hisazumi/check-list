@@ -14,6 +14,9 @@ import type { Unsubscribe } from 'firebase/firestore'
 
 const { user, authLoading, signOut } = useAuth()
 
+const navBarEl = ref<InstanceType<typeof NavigationBar> | null>(null)
+let navBarObserver: ResizeObserver | null = null
+
 // デフォルトのチェックリスト設定
 const defaultChecklists: ChecklistConfig[] = [
   {
@@ -152,29 +155,28 @@ watch(checklists, () => {
   }
 }, { deep: true })
 
-const bottomBarEl = ref<HTMLElement | null>(null)
-let bottomBarObserver: ResizeObserver | null = null
-
-onMounted(() => {
-  loadFromLocalStorage()
-
-  if (bottomBarEl.value) {
-    const applyHeight = () => {
-      if (bottomBarEl.value) {
-        document.documentElement.style.setProperty(
-          '--bottom-bar-height',
-          `${bottomBarEl.value.offsetHeight}px`
-        )
-      }
+watch(navBarEl, (el) => {
+  navBarObserver?.disconnect()
+  navBarObserver = null
+  if (el?.$el) {
+    const applyNavHeight = () => {
+      document.documentElement.style.setProperty(
+        '--nav-bar-height',
+        `${(el.$el as HTMLElement).offsetHeight}px`
+      )
     }
-    applyHeight()
-    bottomBarObserver = new ResizeObserver(applyHeight)
-    bottomBarObserver.observe(bottomBarEl.value)
+    applyNavHeight()
+    navBarObserver = new ResizeObserver(applyNavHeight)
+    navBarObserver.observe(el.$el as HTMLElement)
   }
 })
 
+onMounted(() => {
+  loadFromLocalStorage()
+})
+
 onBeforeUnmount(() => {
-  bottomBarObserver?.disconnect()
+  navBarObserver?.disconnect()
   stopFirestoreSync()
 })
 
@@ -403,14 +405,18 @@ const handleTouchEnd = () => {
     @touchend="handleTouchEnd"
   >
     <NavigationBar
+      ref="navBarEl"
       :active-item="activeView"
       :nav-items="navItems"
       :is-edit-mode="isEditMode"
       :user="user"
+      :stats="stats"
       @nav-change="handleNavChangeWithEditReset"
       @add-checklist="handleAddChecklist"
       @update-checklist-name="handleUpdateChecklistName"
       @sign-out="signOut"
+      @edit="handleEdit"
+      @reset-or-delete="handleResetOrDelete"
     />
     <div class="view-container">
       <div
@@ -434,26 +440,6 @@ const handleTouchEnd = () => {
             @update:stats="handleStatsUpdate"
           />
         </div>
-      </div>
-    </div>
-    <div class="bottom-bar" ref="bottomBarEl">
-      <div class="progress">
-        {{ stats.completedCount }} / {{ stats.totalCount }} 完了
-      </div>
-      <div class="button-group">
-        <button
-          class="edit-button"
-          :class="{ active: isEditMode }"
-          @click="handleEdit"
-        >
-          {{ isEditMode ? '編集完了' : '項目を編集' }}
-        </button>
-        <button
-          :class="isEditMode ? 'delete-list-button' : 'reset-button'"
-          @click="handleResetOrDelete"
-        >
-          {{ isEditMode ? 'リストを削除' : 'すべてリセット' }}
-        </button>
       </div>
     </div>
   </div>
@@ -489,13 +475,12 @@ const handleTouchEnd = () => {
   overflow-x: hidden;
   touch-action: pan-y;
   position: relative;
-  --nav-bar-height: calc(6px + env(safe-area-inset-top) + 10px + 14px + 10px + 6px);
 }
 
 .view-container {
   position: absolute;
   top: var(--nav-bar-height);
-  bottom: var(--bottom-bar-height, 100px);
+  bottom: 0;
   left: 0;
   right: 0;
   display: flex;
@@ -526,112 +511,8 @@ const handleTouchEnd = () => {
 }
 
 @media (max-width: 600px) {
-  .app {
-    --nav-bar-height: calc(6px + env(safe-area-inset-top) + 8px + 13px + 8px + 6px);
-  }
-
   .view-wrapper {
     padding: 0;
-  }
-}
-
-.bottom-bar {
-  position: fixed;
-  bottom: 0;
-  left: 0;
-  right: 0;
-  background: white;
-  box-shadow: 0 -4px 20px rgba(0, 0, 0, 0.15);
-  padding: 15px 20px calc(15px + env(safe-area-inset-bottom, 0px));
-  z-index: 1001;
-}
-
-.progress {
-  text-align: center;
-  font-size: 1.2em;
-  color: #667eea;
-  font-weight: bold;
-  margin-bottom: 10px;
-}
-
-.button-group {
-  display: flex;
-  gap: 10px;
-}
-
-.edit-button,
-.reset-button {
-  flex: 1;
-  padding: 15px;
-  border: none;
-  border-radius: 10px;
-  font-size: 1.1em;
-  cursor: pointer;
-  transition: all 0.3s ease;
-  user-select: none;
-  -webkit-user-select: none;
-  -moz-user-select: none;
-  -webkit-tap-highlight-color: transparent;
-}
-
-.edit-button {
-  background: #f0f0f0;
-  color: #667eea;
-  border: 2px solid #667eea;
-}
-
-.edit-button:hover {
-  background: #e0e0f0;
-}
-
-.edit-button.active {
-  background: #667eea;
-  color: white;
-}
-
-.reset-button {
-  background: #667eea;
-  color: white;
-}
-
-.delete-list-button {
-  flex: 1;
-  padding: 15px;
-  border: none;
-  border-radius: 10px;
-  font-size: 1.1em;
-  cursor: pointer;
-  transition: all 0.3s ease;
-  background: #dc3545;
-  color: white;
-  user-select: none;
-  -webkit-user-select: none;
-  -moz-user-select: none;
-  -webkit-tap-highlight-color: transparent;
-}
-
-.delete-list-button:hover {
-  background: #c82333;
-}
-
-@media (max-width: 600px) {
-  .bottom-bar {
-    padding: 12px 16px calc(12px + env(safe-area-inset-bottom, 0px));
-  }
-
-  .edit-button,
-  .reset-button,
-  .delete-list-button {
-    padding: 12px;
-  }
-
-  .progress {
-    font-size: 1.1em;
-    margin-bottom: 8px;
-  }
-
-  .button-group {
-    gap: 8px;
   }
 }
 </style>
