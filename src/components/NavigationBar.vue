@@ -2,13 +2,11 @@
 import { ref, watch, nextTick } from 'vue'
 import type { User } from 'firebase/auth'
 
-// ナビゲーション項目の型定義
 export interface NavItem {
   id: string
   label: string
 }
 
-// Props定義
 interface Props {
   activeItem: string
   navItems: NavItem[]
@@ -16,7 +14,6 @@ interface Props {
   user?: User | null
 }
 
-// Emits定義
 interface Emits {
   (e: 'nav-change', id: string): void
   (e: 'add-checklist'): void
@@ -31,25 +28,33 @@ const props = withDefaults(defineProps<Props>(), {
 
 const emit = defineEmits<Emits>()
 
-// 編集中のテキスト
 const editingText = ref<string>('')
-// 入力フィールドへの参照
 const inputRef = ref<HTMLInputElement | null>(null)
+const isMenuOpen = ref(false)
 
-// ナビゲーション項目クリックハンドラー
 const handleNavClick = (id: string) => {
   emit('nav-change', id)
 }
 
-// チェックリスト追加ハンドラー
 const handleAddChecklist = () => {
   emit('add-checklist')
 }
 
-// 編集モードが変更されたときの処理
+const toggleMenu = () => {
+  isMenuOpen.value = !isMenuOpen.value
+}
+
+const closeMenu = () => {
+  isMenuOpen.value = false
+}
+
+const handleSignOut = () => {
+  isMenuOpen.value = false
+  emit('sign-out')
+}
+
 watch(() => props.isEditMode, async (newValue) => {
   if (newValue) {
-    // 編集モードに入ったら自動的に編集開始
     const activeNavItem = props.navItems.find(item => item.id === props.activeItem)
     if (activeNavItem) {
       editingText.value = activeNavItem.label
@@ -57,11 +62,9 @@ watch(() => props.isEditMode, async (newValue) => {
       inputRef.value?.focus()
     }
   } else {
-    // 編集モードを終了するときに変更を保存
     const trimmedText = editingText.value.trim()
     if (trimmedText) {
       const activeNavItem = props.navItems.find(item => item.id === props.activeItem)
-      // 元の名前と異なる場合のみ更新
       if (activeNavItem && trimmedText !== activeNavItem.label) {
         emit('update-checklist-name', props.activeItem, trimmedText)
       }
@@ -70,10 +73,8 @@ watch(() => props.isEditMode, async (newValue) => {
   }
 })
 
-// アクティブアイテムが変更されたときの処理
 watch(() => props.activeItem, async () => {
   if (props.isEditMode) {
-    // 編集モード中にアクティブアイテムが変更された場合、新しいアイテムの名前を設定
     const activeNavItem = props.navItems.find(item => item.id === props.activeItem)
     if (activeNavItem) {
       editingText.value = activeNavItem.label
@@ -100,37 +101,61 @@ watch(() => props.activeItem, async () => {
       </div>
       <!-- 通常のナビゲーションUI -->
       <template v-else>
-        <button
-          v-for="item in navItems"
-          :key="item.id"
-          :class="['nav-item', { active: props.activeItem === item.id }]"
-          @click="handleNavClick(item.id)"
-        >
-          <span class="nav-label">{{ item.label }}</span>
-        </button>
-        <button
-          class="add-button"
-          @click="handleAddChecklist"
-          title="新しいチェックリストを追加"
-        >
-          ＋
-        </button>
-        <button
-          v-if="props.user"
-          class="user-button"
-          @click="emit('sign-out')"
-          :title="`${props.user.displayName ?? props.user.email} としてログイン中 — タップしてサインアウト`"
-        >
-          <img
-            v-if="props.user.photoURL"
-            :src="props.user.photoURL"
-            :alt="props.user.displayName ?? 'user'"
-            class="user-avatar"
-          />
-          <span v-else class="user-avatar-fallback">
-            {{ (props.user.displayName ?? props.user.email ?? '?')[0].toUpperCase() }}
-          </span>
-        </button>
+        <!-- スクロール可能なナビ部分 -->
+        <div class="nav-items-scroll">
+          <button
+            v-for="item in navItems"
+            :key="item.id"
+            :class="['nav-item', { active: props.activeItem === item.id }]"
+            @click="handleNavClick(item.id)"
+          >
+            <span class="nav-label">{{ item.label }}</span>
+          </button>
+          <button
+            class="add-button"
+            @click="handleAddChecklist"
+            title="新しいチェックリストを追加"
+          >
+            ＋
+          </button>
+        </div>
+
+        <!-- 右端に固定表示するユーザーアイコン -->
+        <div v-if="props.user" class="user-area">
+          <button
+            class="user-button"
+            @click="toggleMenu"
+            :aria-expanded="isMenuOpen"
+            aria-label="ユーザーメニュー"
+          >
+            <img
+              v-if="props.user.photoURL"
+              :src="props.user.photoURL"
+              :alt="props.user.displayName ?? 'user'"
+              class="user-avatar"
+            />
+            <span v-else class="user-avatar-fallback">
+              {{ (props.user.displayName ?? props.user.email ?? '?')[0].toUpperCase() }}
+            </span>
+          </button>
+
+          <!-- サブメニュー -->
+          <Transition name="menu">
+            <div v-if="isMenuOpen" class="user-menu">
+              <div class="user-menu-id">{{ props.user.email ?? props.user.displayName }}</div>
+              <div class="user-menu-divider"></div>
+              <button class="user-menu-signout" @click="handleSignOut">
+                <svg xmlns="http://www.w3.org/2000/svg" height="18" viewBox="0 -960 960 960" width="18" fill="currentColor">
+                  <path d="M200-120q-33 0-56.5-23.5T120-200v-560q0-33 23.5-56.5T200-840h280v80H200v560h280v80H200Zm440-160-55-58 102-102H360v-80h327L585-622l55-58 200 200-200 200Z"/>
+                </svg>
+                ログアウト
+              </button>
+            </div>
+          </Transition>
+
+          <!-- メニュー外クリックで閉じる -->
+          <div v-if="isMenuOpen" class="menu-backdrop" @click="closeMenu"></div>
+        </div>
       </template>
     </div>
   </nav>
@@ -145,11 +170,8 @@ watch(() => props.activeItem, async () => {
   background: white;
   box-shadow: 0 4px 20px rgba(0, 0, 0, 0.15);
   z-index: 1000;
-  /* 視覚的な分離を強化するためのぼかし効果 */
   -webkit-backdrop-filter: blur(10px);
   backdrop-filter: blur(10px);
-  /* ナビゲーションバーの高さをCSS変数として定義 */
-  /* 計算: top padding (6px) + safe area + content top padding (10px) + font height (14px) + content bottom padding (10px) + bottom padding (6px) = 45px */
   --nav-bar-height: calc(6px + env(safe-area-inset-top) + 10px + 14px + 10px + 6px);
 }
 
@@ -157,15 +179,23 @@ watch(() => props.activeItem, async () => {
   display: flex;
   align-items: center;
   padding: calc(6px + env(safe-area-inset-top)) 8px 6px;
-  overflow-x: auto;
-  gap: 8px;
-  /* スクロールバーを非表示にする */
-  scrollbar-width: none; /* Firefox */
-  -ms-overflow-style: none; /* IE and Edge */
+  gap: 0;
 }
 
-.nav-scroll-container::-webkit-scrollbar {
-  display: none; /* Chrome, Safari, Opera */
+/* スクロール可能なナビ部分 */
+.nav-items-scroll {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  flex: 1;
+  overflow-x: auto;
+  scrollbar-width: none;
+  -ms-overflow-style: none;
+  min-width: 0;
+}
+
+.nav-items-scroll::-webkit-scrollbar {
+  display: none;
 }
 
 .nav-item {
@@ -182,11 +212,9 @@ watch(() => props.activeItem, async () => {
   border-radius: 10px;
   flex-shrink: 0;
   min-width: 100px;
-  /* 文字選択を無効化 */
   user-select: none;
   -webkit-user-select: none;
   -moz-user-select: none;
-  /* 押下時のハイライトを無効化 */
   -webkit-tap-highlight-color: transparent;
 }
 
@@ -217,17 +245,22 @@ watch(() => props.activeItem, async () => {
   min-width: 60px;
   font-size: 20px;
   font-weight: bold;
-  /* 文字選択を無効化 */
   user-select: none;
   -webkit-user-select: none;
   -moz-user-select: none;
-  /* 押下時のハイライトを無効化 */
   -webkit-tap-highlight-color: transparent;
 }
 
 .add-button:hover {
   background: #f0f3ff;
   transform: scale(1.05);
+}
+
+/* ユーザーエリア（右端固定） */
+.user-area {
+  position: relative;
+  flex-shrink: 0;
+  margin-left: 8px;
 }
 
 .user-button {
@@ -249,16 +282,16 @@ watch(() => props.activeItem, async () => {
 }
 
 .user-avatar {
-  width: 28px;
-  height: 28px;
+  width: 30px;
+  height: 30px;
   border-radius: 50%;
   object-fit: cover;
   border: 2px solid #667eea;
 }
 
 .user-avatar-fallback {
-  width: 28px;
-  height: 28px;
+  width: 30px;
+  height: 30px;
   border-radius: 50%;
   background: #667eea;
   color: white;
@@ -268,6 +301,72 @@ watch(() => props.activeItem, async () => {
   align-items: center;
   justify-content: center;
   border: 2px solid #667eea;
+}
+
+/* サブメニュー */
+.user-menu {
+  position: absolute;
+  top: calc(100% + 8px);
+  right: 0;
+  background: white;
+  border-radius: 12px;
+  box-shadow: 0 8px 30px rgba(0, 0, 0, 0.15);
+  min-width: 200px;
+  overflow: hidden;
+  z-index: 2000;
+}
+
+.user-menu-id {
+  padding: 14px 16px 10px;
+  font-size: 0.82em;
+  color: #888;
+  word-break: break-all;
+  line-height: 1.4;
+}
+
+.user-menu-divider {
+  height: 1px;
+  background: #f0f0f0;
+  margin: 0;
+}
+
+.user-menu-signout {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  width: 100%;
+  padding: 12px 16px;
+  background: none;
+  border: none;
+  font-size: 0.95em;
+  color: #dc3545;
+  cursor: pointer;
+  text-align: left;
+  transition: background 0.15s ease;
+  -webkit-tap-highlight-color: transparent;
+}
+
+.user-menu-signout:hover {
+  background: #fff5f5;
+}
+
+/* メニュー外クリック検知用オーバーレイ */
+.menu-backdrop {
+  position: fixed;
+  inset: 0;
+  z-index: 1999;
+}
+
+/* メニューのアニメーション */
+.menu-enter-active,
+.menu-leave-active {
+  transition: opacity 0.15s ease, transform 0.15s ease;
+}
+
+.menu-enter-from,
+.menu-leave-to {
+  opacity: 0;
+  transform: translateY(-6px);
 }
 
 .edit-name-container {
@@ -295,14 +394,11 @@ watch(() => props.activeItem, async () => {
 
 @media (max-width: 600px) {
   .navigation-bar {
-    /* スマートフォン用のナビゲーションバーの高さ */
-    /* 計算: top padding (6px) + safe area + content top padding (8px) + font height (13px) + content bottom padding (8px) + bottom padding (6px) = 41px */
     --nav-bar-height: calc(6px + env(safe-area-inset-top) + 8px + 13px + 8px + 6px);
   }
 
   .nav-scroll-container {
     padding: calc(6px + env(safe-area-inset-top)) 6px 6px;
-    gap: 6px;
   }
 
   .nav-item {
@@ -313,7 +409,7 @@ watch(() => props.activeItem, async () => {
   .nav-label {
     font-size: 13px;
   }
-  
+
   .add-button {
     padding: 2px 12px;
     min-width: 50px;
