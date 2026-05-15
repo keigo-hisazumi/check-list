@@ -77,8 +77,23 @@ const saveCustomItemsToLS = (items: ChecklistItem[]) => {
   localStorage.setItem(`${props.checklistId}-custom-items`, JSON.stringify(items))
 }
 
+const deletedInitialIds = ref<string[]>([])
+
+const loadDeletedInitialIdsFromLS = () => {
+  const saved = localStorage.getItem(`${props.checklistId}-deleted-initial-ids`)
+  if (saved) {
+    try { deletedInitialIds.value = JSON.parse(saved) } catch { deletedInitialIds.value = [] }
+  }
+}
+
+const saveDeletedInitialIdsToLS = (ids: string[]) => {
+  localStorage.setItem(`${props.checklistId}-deleted-initial-ids`, JSON.stringify(ids))
+}
+
 const getAllItems = (): ChecklistItem[] => {
-  return [...props.initialItems, ...loadCustomItemsFromLS()]
+  const deletedSet = new Set(deletedInitialIds.value)
+  const activeInitialItems = props.initialItems.filter(i => !deletedSet.has(i.id))
+  return [...activeInitialItems, ...loadCustomItemsFromLS()]
 }
 
 const loadItemOrderFromLS = () => {
@@ -131,14 +146,14 @@ const loadCustomLabelsFromLS = () => {
 
 // 現在の状態を ChecklistData にまとめる
 const buildChecklistData = (): ChecklistData => {
-  // customItems = checklistItems のうち initialItems に含まれないもの
   const initialIds = new Set(props.initialItems.map(i => i.id))
   const customItems = checklistItems.value.filter(i => !initialIds.has(i.id))
   return {
     customItems,
     order: checklistItems.value.map(i => i.id),
     checkedItems: { ...checkedItems.value },
-    customLabels: { ...customLabels.value }
+    customLabels: { ...customLabels.value },
+    deletedInitialIds: [...deletedInitialIds.value]
   }
 }
 
@@ -166,13 +181,19 @@ const scheduleSaveToFirestore = () => {
 
 // Firestoreのデータを状態に適用
 const applyFirestoreData = (data: ChecklistData) => {
-  const allInitialItems = [...props.initialItems]
+  if (data.deletedInitialIds) {
+    deletedInitialIds.value = [...data.deletedInitialIds]
+    saveDeletedInitialIdsToLS(deletedInitialIds.value)
+  }
+
+  const deletedSet = new Set(deletedInitialIds.value)
+  const activeInitialItems = props.initialItems.filter(i => !deletedSet.has(i.id))
   const customItemMap = new Map(data.customItems.map(i => [i.id, i]))
 
   // order に従って並べ替え
   const allItems: ChecklistItem[] = []
   data.order.forEach(id => {
-    const initial = allInitialItems.find(i => i.id === id)
+    const initial = activeInitialItems.find(i => i.id === id)
     if (initial) {
       allItems.push(initial)
     } else if (customItemMap.has(id)) {
@@ -180,7 +201,7 @@ const applyFirestoreData = (data: ChecklistData) => {
     }
   })
   // order に含まれていないものを末尾に追加
-  allInitialItems.forEach(i => {
+  activeInitialItems.forEach(i => {
     if (!data.order.includes(i.id)) allItems.push(i)
   })
   data.customItems.forEach(i => {
@@ -238,6 +259,7 @@ watch(() => props.uid, (newUid) => {
 
 // コンポーネントマウント時に状態を読み込む
 onMounted(() => {
+  loadDeletedInitialIdsFromLS()
   loadItemOrderFromLS()
   loadCheckedStateFromLS()
   loadCustomLabelsFromLS()
@@ -333,16 +355,17 @@ const addNewItem = async () => {
 
 // アイテムを削除
 const deleteItem = (id: string) => {
+  if (!confirm('この項目を削除しますか？')) return
+
   const isInitialItem = props.initialItems.some(item => item.id === id)
-  if (isInitialItem) {
-    if (!confirm('初期項目を削除しますか？\n（削除しても初期項目は再読み込み時に復元できます）')) return
-  } else {
-    if (!confirm('この項目を削除しますか？')) return
-  }
 
   checklistItems.value = checklistItems.value.filter(item => item.id !== id)
 
-  if (!isInitialItem) {
+  if (isInitialItem) {
+    const newDeletedIds = [...deletedInitialIds.value, id]
+    deletedInitialIds.value = newDeletedIds
+    saveDeletedInitialIdsToLS(newDeletedIds)
+  } else {
     const customItems = loadCustomItemsFromLS()
     saveCustomItemsToLS(customItems.filter(item => item.id !== id))
   }
