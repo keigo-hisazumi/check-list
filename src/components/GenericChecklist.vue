@@ -529,9 +529,8 @@ const completedCount = computed(() =>
   Object.values(checkedItems.value).filter(Boolean).length
 )
 const totalCount = computed(() => checklistItems.value.length)
-const isActiveComputed = computed(() => props.isActive)
 
-watch([completedCount, totalCount, isActiveComputed], () => {
+watch([completedCount, totalCount, () => props.isActive], () => {
   if (props.isActive) {
     emit('update:stats', { completedCount: completedCount.value, totalCount: totalCount.value })
   }
