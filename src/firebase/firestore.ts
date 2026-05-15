@@ -24,6 +24,7 @@ export interface ChecklistData {
   order: string[]
   checkedItems: Record<string, boolean>
   customLabels: Record<string, string>
+  deletedInitialIds?: string[]
 }
 
 // ユーザーのチェックリスト設定を取得
