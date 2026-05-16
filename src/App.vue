@@ -49,21 +49,11 @@ const currentIndex = computed(() =>
   checklists.value.findIndex(c => c.id === activeView.value)
 )
 
-const navigateTo = (index: number) => {
-  if (isEditMode.value) {
-    checklistRefs.value[activeView.value]?.disableEditMode()
-    isEditMode.value = false
-  }
-  activeView.value = checklists.value[index].id
-  translateX.value = 0
-  isTransitioning.value = false
-}
-
 const { translateX, isTransitioning, handleTouchStart, handleTouchMove, handleTouchEnd } = useSwipe(
   currentIndex,
   computed(() => checklists.value.length),
   isEditMode,
-  navigateTo
+  (index) => { activeView.value = checklists.value[index].id }
 )
 
 const handleStatsUpdate = (newStats: { completedCount: number; totalCount: number }) => {
@@ -84,8 +74,13 @@ const handleEdit = () => {
 }
 
 const handleNavChange = (viewId: string) => {
-  const index = checklists.value.findIndex(c => c.id === viewId)
-  if (index !== -1) navigateTo(index)
+  if (isEditMode.value) {
+    checklistRefs.value[activeView.value]?.disableEditMode()
+    isEditMode.value = false
+  }
+  activeView.value = viewId
+  translateX.value = 0
+  isTransitioning.value = false
 }
 
 const handleResetOrDelete = () => {
