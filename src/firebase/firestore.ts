@@ -1,6 +1,5 @@
 import {
   doc,
-  getDoc,
   setDoc,
   deleteDoc,
   onSnapshot,
@@ -27,16 +26,6 @@ export interface ChecklistData {
   deletedInitialIds?: string[]
 }
 
-// ユーザーのチェックリスト設定を取得
-export async function loadChecklistsConfig(uid: string): Promise<ChecklistConfig[] | null> {
-  const ref = doc(db, 'users', uid, 'data', 'config')
-  const snap = await getDoc(ref)
-  if (snap.exists()) {
-    return snap.data().checklists as ChecklistConfig[]
-  }
-  return null
-}
-
 // ユーザーのチェックリスト設定をリアルタイム購読
 export function subscribeChecklistsConfig(
   uid: string,
@@ -56,16 +45,6 @@ export function subscribeChecklistsConfig(
 export async function saveChecklistsConfig(uid: string, checklists: ChecklistConfig[]): Promise<void> {
   const ref = doc(db, 'users', uid, 'data', 'config')
   await setDoc(ref, { checklists })
-}
-
-// チェックリストデータを取得
-export async function loadChecklistData(uid: string, checklistId: string): Promise<ChecklistData | null> {
-  const ref = doc(db, 'users', uid, 'checklists', checklistId)
-  const snap = await getDoc(ref)
-  if (snap.exists()) {
-    return snap.data() as ChecklistData
-  }
-  return null
 }
 
 // チェックリストデータをリアルタイム購読
