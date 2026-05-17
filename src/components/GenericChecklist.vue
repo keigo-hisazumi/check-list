@@ -38,7 +38,6 @@ const checkedItems = ref<Record<string, boolean>>({})
 const isEditMode = ref<boolean>(false)
 const editingItemId = ref<string | null>(null)
 const editingText = ref<string>('')
-const customLabels = ref<Record<string, string>>({})
 let editInputElement: HTMLInputElement | null = null
 const setEditInputRef = (el: Element | object | null) => {
   if (el instanceof HTMLInputElement) {
@@ -79,23 +78,8 @@ const saveCustomItemsToLS = (items: ChecklistItem[]) => {
   localStorage.setItem(`${lsPrefix()}-custom-items`, JSON.stringify(items))
 }
 
-const deletedInitialIds = ref<string[]>([])
-
-const loadDeletedInitialIdsFromLS = () => {
-  const saved = localStorage.getItem(`${lsPrefix()}-deleted-initial-ids`)
-  if (saved) {
-    try { deletedInitialIds.value = JSON.parse(saved) } catch { deletedInitialIds.value = [] }
-  }
-}
-
-const saveDeletedInitialIdsToLS = (ids: string[]) => {
-  localStorage.setItem(`${lsPrefix()}-deleted-initial-ids`, JSON.stringify(ids))
-}
-
 const getAllItems = (): ChecklistItem[] => {
-  const deletedSet = new Set(deletedInitialIds.value)
-  const activeInitialItems = props.initialItems.filter(i => !deletedSet.has(i.id))
-  return [...activeInitialItems, ...loadCustomItemsFromLS()]
+  return loadCustomItemsFromLS()
 }
 
 const loadItemOrderFromLS = () => {
@@ -135,27 +119,14 @@ const loadCheckedStateFromLS = () => {
   checkedItems.value = saved
 }
 
-const loadCustomLabelsFromLS = () => {
-  const saved: Record<string, string> = {}
-  checklistItems.value.forEach(item => {
-    const val = localStorage.getItem(`${lsPrefix()}-${item.id}-label`)
-    if (val) saved[item.id] = val
-  })
-  customLabels.value = saved
-}
-
 // ---- Firestore ヘルパー ----
 
 // 現在の状態を ChecklistData にまとめる
 const buildChecklistData = (): ChecklistData => {
-  const initialIds = new Set(props.initialItems.map(i => i.id))
-  const customItems = checklistItems.value.filter(i => !initialIds.has(i.id))
   return {
-    customItems,
+    customItems: [...checklistItems.value],
     order: checklistItems.value.map(i => i.id),
     checkedItems: { ...checkedItems.value },
-    customLabels: { ...customLabels.value },
-    deletedInitialIds: [...deletedInitialIds.value]
   }
 }
 
@@ -183,45 +154,39 @@ const scheduleSaveToFirestore = () => {
 
 // Firestoreのデータを状態に適用
 const applyFirestoreData = (data: ChecklistData) => {
-  if (data.deletedInitialIds) {
-    deletedInitialIds.value = [...data.deletedInitialIds]
-    saveDeletedInitialIdsToLS(deletedInitialIds.value)
+  // 旧フォーマットからの移行: 削除済み初期アイテムと customLabels を考慮して統合
+  const legacyDeletedIds = new Set(data.deletedInitialIds ?? [])
+  const legacyCustomLabels = data.customLabels ?? {}
+  const customItemIds = new Set(data.customItems.map(i => i.id))
+
+  const allCustomItems = data.customItems.map(item => ({
+    ...item,
+    label: legacyCustomLabels[item.id] ?? item.label
+  }))
+
+  for (const initial of props.initialItems) {
+    if (!legacyDeletedIds.has(initial.id) && !customItemIds.has(initial.id)) {
+      allCustomItems.push({ id: initial.id, label: legacyCustomLabels[initial.id] ?? initial.label })
+    }
   }
 
-  const deletedSet = new Set(deletedInitialIds.value)
-  const activeInitialItems = props.initialItems.filter(i => !deletedSet.has(i.id))
-  const customItemMap = new Map(data.customItems.map(i => [i.id, i]))
-
-  // order に従って並べ替え
+  const customItemMap = new Map(allCustomItems.map(i => [i.id, i]))
   const allItems: ChecklistItem[] = []
   data.order.forEach(id => {
-    const initial = activeInitialItems.find(i => i.id === id)
-    if (initial) {
-      allItems.push(initial)
-    } else if (customItemMap.has(id)) {
-      allItems.push(customItemMap.get(id)!)
-    }
+    if (customItemMap.has(id)) allItems.push(customItemMap.get(id)!)
   })
-  // order に含まれていないものを末尾に追加
-  activeInitialItems.forEach(i => {
-    if (!data.order.includes(i.id)) allItems.push(i)
-  })
-  data.customItems.forEach(i => {
+  allCustomItems.forEach(i => {
     if (!data.order.includes(i.id)) allItems.push(i)
   })
 
   checklistItems.value = allItems
   checkedItems.value = { ...data.checkedItems }
-  customLabels.value = { ...data.customLabels }
 
   // ローカルストレージにもキャッシュ
   saveItemOrderToLS()
-  saveCustomItemsToLS(data.customItems)
+  saveCustomItemsToLS(allItems)
   Object.entries(data.checkedItems).forEach(([id, checked]) => {
     localStorage.setItem(`${lsPrefix()}-${id}`, String(checked))
-  })
-  Object.entries(data.customLabels).forEach(([id, label]) => {
-    localStorage.setItem(`${lsPrefix()}-${id}-label`, label)
   })
 }
 
@@ -261,10 +226,27 @@ watch(() => props.uid, (newUid) => {
 
 // コンポーネントマウント時に状態を読み込む
 onMounted(() => {
-  loadDeletedInitialIdsFromLS()
+  // 初期アイテムを custom-items ストアへ統合（旧フォーマット移行含む）
+  const existingCustomItems = loadCustomItemsFromLS()
+  const customItemIds = new Set(existingCustomItems.map(i => i.id))
+  const legacyDeletedStr = localStorage.getItem(`${lsPrefix()}-deleted-initial-ids`)
+  const legacyDeletedIds = legacyDeletedStr
+    ? new Set(JSON.parse(legacyDeletedStr) as string[])
+    : new Set<string>()
+  const legacyCustomLabels: Record<string, string> = {}
+  props.initialItems.forEach(item => {
+    const val = localStorage.getItem(`${lsPrefix()}-${item.id}-label`)
+    if (val) legacyCustomLabels[item.id] = val
+  })
+  const missing = props.initialItems
+    .filter(i => !customItemIds.has(i.id) && !legacyDeletedIds.has(i.id))
+    .map(i => ({ id: i.id, label: legacyCustomLabels[i.id] ?? i.label }))
+  if (missing.length > 0) {
+    saveCustomItemsToLS([...existingCustomItems, ...missing])
+  }
+
   loadItemOrderFromLS()
   loadCheckedStateFromLS()
-  loadCustomLabelsFromLS()
   if (props.uid) {
     startFirestoreSync()
   }
@@ -298,7 +280,7 @@ const handleCheckChange = (id: string) => {
 // 編集モードを開始
 const startEdit = async (id: string) => {
   editingItemId.value = id
-  editingText.value = customLabels.value[id] || checklistItems.value.find(item => item.id === id)?.label || ''
+  editingText.value = checklistItems.value.find(item => item.id === id)?.label || ''
   await nextTick()
   await nextTick()
   if (editInputElement) {
@@ -314,7 +296,7 @@ const cancelEdit = () => {
   editingText.value = ''
   if (currentId) {
     const item = checklistItems.value.find(item => item.id === currentId)
-    if (item && item.label === '' && !customLabels.value[currentId]) {
+    if (item && item.label === '') {
       checklistItems.value = checklistItems.value.filter(item => item.id !== currentId)
     }
   }
@@ -324,16 +306,17 @@ const cancelEdit = () => {
 const saveEdit = (id: string) => {
   const trimmedText = editingText.value.trim()
   if (trimmedText) {
-    customLabels.value = { ...customLabels.value, [id]: trimmedText }
-    localStorage.setItem(`${lsPrefix()}-${id}-label`, trimmedText)
-
     const item = checklistItems.value.find(item => item.id === id)
-    if (item && item.label === '') {
-      const customItems = loadCustomItemsFromLS()
-      const newItem: ChecklistItem = { id, label: trimmedText }
-      customItems.push(newItem)
-      saveCustomItemsToLS(customItems)
+    if (item) {
       item.label = trimmedText
+      const customItems = loadCustomItemsFromLS()
+      const customItem = customItems.find(i => i.id === id)
+      if (customItem) {
+        customItem.label = trimmedText
+      } else {
+        customItems.push({ id, label: trimmedText })
+      }
+      saveCustomItemsToLS(customItems)
       saveItemOrderToLS()
     }
     scheduleSaveToFirestore()
@@ -359,18 +342,9 @@ const addNewItem = async () => {
 const deleteItem = (id: string) => {
   if (!confirm('この項目を削除しますか？')) return
 
-  const isInitialItem = props.initialItems.some(item => item.id === id)
-
   checklistItems.value = checklistItems.value.filter(item => item.id !== id)
-
-  if (isInitialItem) {
-    const newDeletedIds = [...deletedInitialIds.value, id]
-    deletedInitialIds.value = newDeletedIds
-    saveDeletedInitialIdsToLS(newDeletedIds)
-  } else {
-    const customItems = loadCustomItemsFromLS()
-    saveCustomItemsToLS(customItems.filter(item => item.id !== id))
-  }
+  const customItems = loadCustomItemsFromLS()
+  saveCustomItemsToLS(customItems.filter(item => item.id !== id))
 
   if (checkedItems.value[id]) {
     const newCheckedItems = { ...checkedItems.value }
@@ -379,20 +353,13 @@ const deleteItem = (id: string) => {
     localStorage.removeItem(`${lsPrefix()}-${id}`)
   }
 
-  if (customLabels.value[id]) {
-    const newCustomLabels = { ...customLabels.value }
-    delete newCustomLabels[id]
-    customLabels.value = newCustomLabels
-    localStorage.removeItem(`${lsPrefix()}-${id}-label`)
-  }
-
   saveItemOrderToLS()
   scheduleSaveToFirestore()
 }
 
 // 表示用のラベルを取得
 const getDisplayLabel = (item: ChecklistItem): string => {
-  return customLabels.value[item.id] || item.label
+  return item.label
 }
 
 const getElementTotalHeight = (element: HTMLElement): number => {
