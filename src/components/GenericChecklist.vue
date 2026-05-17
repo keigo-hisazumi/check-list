@@ -62,6 +62,7 @@ const itemRefs = ref<(HTMLElement | null)[]>([])
 let firestoreUnsubscribe: Unsubscribe | null = null
 let isSavingToFirestore = false
 let lastFirestoreJson = ''
+let hasSyncedFromFirestore = false
 
 // ---- LocalStorage ヘルパー ----
 const lsPrefix = () => `${props.uid || 'guest'}-${props.checklistId}`
@@ -134,6 +135,8 @@ const buildChecklistData = (): ChecklistData => {
 let saveTimer: ReturnType<typeof setTimeout> | null = null
 const scheduleSaveToFirestore = () => {
   if (!props.uid) return
+  // Firestore から最初のスナップショットを受け取る前は保存しない（ローカルの古いデータで上書きを防ぐ）
+  if (!hasSyncedFromFirestore) return
   if (saveTimer) clearTimeout(saveTimer)
   saveTimer = setTimeout(async () => {
     if (!props.uid) return
@@ -196,6 +199,7 @@ const startFirestoreSync = () => {
   stopFirestoreSync()
   firestoreUnsubscribe = subscribeChecklistData(props.uid, props.checklistId, (data) => {
     if (isSavingToFirestore) return
+    hasSyncedFromFirestore = true
     if (data) {
       const json = JSON.stringify(data)
       if (json === lastFirestoreJson) return
@@ -218,9 +222,13 @@ const stopFirestoreSync = () => {
 // uid が変わったら購読を再設定
 watch(() => props.uid, (newUid) => {
   if (newUid) {
+    hasSyncedFromFirestore = false
+    lastFirestoreJson = ''
     startFirestoreSync()
   } else {
     stopFirestoreSync()
+    hasSyncedFromFirestore = false
+    lastFirestoreJson = ''
   }
 })
 
