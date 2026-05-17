@@ -21,15 +21,6 @@ const defaultChecklists: ChecklistConfig[] = [
       { id: 'tutorial-delete', label: 'スワイプしてタスクを削除してみよう' },
       { id: 'tutorial-new-list', label: '「＋」でチェックリストを新しく作ってみよう' },
     ]
-  },
-  {
-    id: 'sample',
-    label: 'サンプル',
-    initialItems: [
-      { id: 'sample-1', label: 'ここに自分のタスクを入れよう' },
-      { id: 'sample-2', label: 'このサンプルリストは自由に編集できます' },
-      { id: 'sample-3', label: '左のタブでリストを切り替えられます' },
-    ]
   }
 ]
 
