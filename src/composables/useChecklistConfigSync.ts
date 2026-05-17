@@ -33,8 +33,10 @@ export function useChecklistConfigSync(user: Ref<User | null>) {
   let isSavingToFirestore = false
   let lastFirestoreJson = ''
 
+  const lsKey = () => `checklists-config-${user.value?.uid ?? 'guest'}`
+
   const loadFromLocalStorage = () => {
-    const saved = localStorage.getItem('checklists-config')
+    const saved = localStorage.getItem(lsKey())
     if (saved) {
       try {
         const parsed = JSON.parse(saved)
@@ -49,12 +51,12 @@ export function useChecklistConfigSync(user: Ref<User | null>) {
     } else {
       checklists.value = [...defaultChecklists]
       activeView.value = checklists.value[0].id
-      localStorage.setItem('checklists-config', JSON.stringify(checklists.value))
+      localStorage.setItem(lsKey(), JSON.stringify(checklists.value))
     }
   }
 
   const saveToLocalStorage = () => {
-    localStorage.setItem('checklists-config', JSON.stringify(checklists.value))
+    localStorage.setItem(lsKey(), JSON.stringify(checklists.value))
   }
 
   const saveToFirestore = async (uid: string) => {
@@ -96,6 +98,8 @@ export function useChecklistConfigSync(user: Ref<User | null>) {
 
   watch(user, (newUser, oldUser) => {
     if (newUser) {
+      lastFirestoreJson = ''
+      loadFromLocalStorage()
       startFirestoreSync(newUser.uid)
     } else if (oldUser && !newUser) {
       stopFirestoreSync()

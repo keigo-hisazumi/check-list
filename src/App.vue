@@ -112,8 +112,10 @@ const handleDeleteChecklist = (id: string) => {
 
   const index = checklists.value.findIndex(c => c.id === id)
   checklists.value.splice(index, 1)
-  localStorage.removeItem(`${id}-custom-items`)
-  localStorage.removeItem(`${id}-order`)
+  const uid = user.value?.uid ?? 'guest'
+  localStorage.removeItem(`${uid}-${id}-custom-items`)
+  localStorage.removeItem(`${uid}-${id}-order`)
+  localStorage.removeItem(`${uid}-${id}-deleted-initial-ids`)
   if (user.value) deleteChecklistData(user.value.uid, id).catch(console.error)
   if (activeView.value === id) activeView.value = checklists.value[0].id
 }
