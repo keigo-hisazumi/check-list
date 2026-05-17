@@ -323,18 +323,26 @@ const cancelEdit = () => {
 // 編集を保存
 const saveEdit = (id: string) => {
   const trimmedText = editingText.value.trim()
-  if (trimmedText) {
-    customLabels.value = { ...customLabels.value, [id]: trimmedText }
-    localStorage.setItem(`${lsPrefix()}-${id}-label`, trimmedText)
+  const isInitialItem = props.initialItems.some(item => item.id === id)
 
-    const item = checklistItems.value.find(item => item.id === id)
-    if (item && item.label === '') {
-      const customItems = loadCustomItemsFromLS()
-      const newItem: ChecklistItem = { id, label: trimmedText }
-      customItems.push(newItem)
-      saveCustomItemsToLS(customItems)
-      item.label = trimmedText
-      saveItemOrderToLS()
+  if (trimmedText) {
+    if (isInitialItem) {
+      customLabels.value = { ...customLabels.value, [id]: trimmedText }
+      localStorage.setItem(`${lsPrefix()}-${id}-label`, trimmedText)
+    } else {
+      const item = checklistItems.value.find(item => item.id === id)
+      if (item) {
+        item.label = trimmedText
+        const customItems = loadCustomItemsFromLS()
+        const customItem = customItems.find(i => i.id === id)
+        if (customItem) {
+          customItem.label = trimmedText
+        } else {
+          customItems.push({ id, label: trimmedText })
+        }
+        saveCustomItemsToLS(customItems)
+        saveItemOrderToLS()
+      }
     }
     scheduleSaveToFirestore()
   } else {
