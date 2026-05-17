@@ -121,7 +121,7 @@ watch(() => props.activeItem, async (id) => {
       <!-- 通常のナビゲーションUI -->
       <template v-else>
         <!-- スクロール可能なナビ部分 -->
-        <div ref="navScrollRef" class="nav-items-scroll">
+        <div ref="navScrollRef" class="nav-items-scroll" @touchstart.stop @touchmove.stop @touchend.stop>
           <button
             v-for="item in navItems"
             :key="item.id"
