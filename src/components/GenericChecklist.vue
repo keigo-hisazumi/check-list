@@ -213,6 +213,7 @@ const applyFirestoreData = (data: ChecklistData) => {
   checklistItems.value = allItems
   checkedItems.value = { ...data.checkedItems }
   customLabels.value = { ...data.customLabels }
+  applyCustomLabelsToItems()
 
   // ローカルストレージにもキャッシュ
   saveItemOrderToLS()
@@ -259,12 +260,21 @@ watch(() => props.uid, (newUid) => {
   }
 })
 
+const applyCustomLabelsToItems = () => {
+  checklistItems.value.forEach(item => {
+    if (customLabels.value[item.id]) {
+      item.label = customLabels.value[item.id]
+    }
+  })
+}
+
 // コンポーネントマウント時に状態を読み込む
 onMounted(() => {
   loadDeletedInitialIdsFromLS()
   loadItemOrderFromLS()
   loadCheckedStateFromLS()
   loadCustomLabelsFromLS()
+  applyCustomLabelsToItems()
   if (props.uid) {
     startFirestoreSync()
   }
@@ -329,6 +339,8 @@ const saveEdit = (id: string) => {
     if (isInitialItem) {
       customLabels.value = { ...customLabels.value, [id]: trimmedText }
       localStorage.setItem(`${lsPrefix()}-${id}-label`, trimmedText)
+      const item = checklistItems.value.find(item => item.id === id)
+      if (item) item.label = trimmedText
     } else {
       const item = checklistItems.value.find(item => item.id === id)
       if (item) {
