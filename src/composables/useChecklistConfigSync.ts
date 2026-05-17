@@ -14,12 +14,13 @@ const defaultChecklists: ChecklistConfig[] = [
     label: 'チュートリアル',
     initialItems: [
       { id: 'tutorial-check', label: 'タスクをタップしてチェックを入れてみよう' },
-      { id: 'tutorial-reset', label: 'リセットボタンで全チェックを外してみよう' },
-      { id: 'tutorial-add', label: '「＋」ボタンで新しいタスクを追加してみよう' },
-      { id: 'tutorial-edit', label: 'タスクを長押しして名前を編集してみよう' },
-      { id: 'tutorial-reorder', label: 'ドラッグして並び替えてみよう' },
-      { id: 'tutorial-delete', label: 'スワイプしてタスクを削除してみよう' },
-      { id: 'tutorial-new-list', label: '「＋」でチェックリストを新しく作ってみよう' },
+      { id: 'tutorial-reset', label: '「すべてリセット」でチェックをまとめて外してみよう' },
+      { id: 'tutorial-edit-mode', label: '「項目を編集」ボタンで編集モードに切り替えてみよう' },
+      { id: 'tutorial-edit', label: '編集モードで鉛筆アイコンをタップしてタスク名を変えてみよう' },
+      { id: 'tutorial-reorder', label: '編集モードでドラッグしてタスクを並び替えてみよう' },
+      { id: 'tutorial-delete', label: '編集モードでゴミ箱アイコンをタップしてタスクを削除してみよう' },
+      { id: 'tutorial-add', label: '編集モードで「新しい項目を追加」からタスクを追加してみよう' },
+      { id: 'tutorial-new-list', label: 'ナビの「＋」ボタンで新しいチェックリストを作ってみよう' },
     ]
   }
 ]
