@@ -4,6 +4,7 @@ import type { User } from 'firebase/auth'
 import type { Unsubscribe } from 'firebase/firestore'
 import {
   subscribeChecklistsConfig,
+  subscribeChecklistIds,
   saveChecklistsConfig,
   type ChecklistConfig
 } from '../firebase/firestore'
@@ -30,8 +31,11 @@ export function useChecklistConfigSync(user: Ref<User | null>) {
   const activeView = ref<string>('')
 
   let configUnsubscribe: Unsubscribe | null = null
+  let checklistIdsUnsubscribe: Unsubscribe | null = null
   let isSavingToFirestore = false
   let lastFirestoreJson = ''
+  let configLoaded = false
+  let knownChecklistIds: string[] = []
 
   const lsKey = () => `checklists-config-${user.value?.uid ?? 'guest'}`
 
@@ -71,17 +75,37 @@ export function useChecklistConfigSync(user: Ref<User | null>) {
     }
   }
 
+  // config に無いが checklists コレクションに存在するリストを config へ追加する
+  const mergeOrphanedChecklists = () => {
+    if (!configLoaded) return
+    const configIds = new Set(checklists.value.map(c => c.id))
+    const orphaned = knownChecklistIds.filter(id => !configIds.has(id))
+    if (orphaned.length === 0) return
+    checklists.value = [
+      ...checklists.value,
+      ...orphaned.map(id => ({ id, label: 'チェックリスト', initialItems: [] as ChecklistConfig['initialItems'] }))
+    ]
+  }
+
   const stopFirestoreSync = () => {
     if (configUnsubscribe) {
       configUnsubscribe()
       configUnsubscribe = null
     }
+    if (checklistIdsUnsubscribe) {
+      checklistIdsUnsubscribe()
+      checklistIdsUnsubscribe = null
+    }
   }
 
   const startFirestoreSync = (uid: string) => {
     stopFirestoreSync()
+    configLoaded = false
+    knownChecklistIds = []
+
     configUnsubscribe = subscribeChecklistsConfig(uid, (remoteChecklists) => {
       if (isSavingToFirestore) return
+      configLoaded = true
       if (remoteChecklists) {
         const json = JSON.stringify(remoteChecklists)
         if (json === lastFirestoreJson) return
@@ -90,9 +114,16 @@ export function useChecklistConfigSync(user: Ref<User | null>) {
         if (!checklists.value.find(c => c.id === activeView.value) && checklists.value.length > 0) {
           activeView.value = checklists.value[0].id
         }
-      } else {
+      }
+      mergeOrphanedChecklists()
+      if (!remoteChecklists) {
         saveToFirestore(uid)
       }
+    })
+
+    checklistIdsUnsubscribe = subscribeChecklistIds(uid, (ids) => {
+      knownChecklistIds = ids
+      mergeOrphanedChecklists()
     })
   }
 

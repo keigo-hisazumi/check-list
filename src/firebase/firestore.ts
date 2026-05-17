@@ -1,5 +1,6 @@
 import {
   doc,
+  collection,
   setDoc,
   deleteDoc,
   onSnapshot,
@@ -46,6 +47,17 @@ export function subscribeChecklistsConfig(
 export async function saveChecklistsConfig(uid: string, checklists: ChecklistConfig[]): Promise<void> {
   const ref = doc(db, 'users', uid, 'data', 'config')
   await setDoc(ref, { checklists })
+}
+
+// checklists コレクション内のドキュメント ID 一覧をリアルタイム購読
+export function subscribeChecklistIds(
+  uid: string,
+  callback: (ids: string[]) => void
+): Unsubscribe {
+  const ref = collection(db, 'users', uid, 'checklists')
+  return onSnapshot(ref, (snap) => {
+    callback(snap.docs.map(d => d.id))
+  })
 }
 
 // チェックリストデータをリアルタイム購読
