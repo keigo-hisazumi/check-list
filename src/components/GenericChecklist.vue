@@ -65,8 +65,10 @@ let isSavingToFirestore = false
 let lastFirestoreJson = ''
 
 // ---- LocalStorage ヘルパー ----
+const lsPrefix = () => `${props.uid || 'guest'}-${props.checklistId}`
+
 const loadCustomItemsFromLS = (): ChecklistItem[] => {
-  const saved = localStorage.getItem(`${props.checklistId}-custom-items`)
+  const saved = localStorage.getItem(`${lsPrefix()}-custom-items`)
   if (saved) {
     try { return JSON.parse(saved) } catch { return [] }
   }
@@ -74,20 +76,20 @@ const loadCustomItemsFromLS = (): ChecklistItem[] => {
 }
 
 const saveCustomItemsToLS = (items: ChecklistItem[]) => {
-  localStorage.setItem(`${props.checklistId}-custom-items`, JSON.stringify(items))
+  localStorage.setItem(`${lsPrefix()}-custom-items`, JSON.stringify(items))
 }
 
 const deletedInitialIds = ref<string[]>([])
 
 const loadDeletedInitialIdsFromLS = () => {
-  const saved = localStorage.getItem(`${props.checklistId}-deleted-initial-ids`)
+  const saved = localStorage.getItem(`${lsPrefix()}-deleted-initial-ids`)
   if (saved) {
     try { deletedInitialIds.value = JSON.parse(saved) } catch { deletedInitialIds.value = [] }
   }
 }
 
 const saveDeletedInitialIdsToLS = (ids: string[]) => {
-  localStorage.setItem(`${props.checklistId}-deleted-initial-ids`, JSON.stringify(ids))
+  localStorage.setItem(`${lsPrefix()}-deleted-initial-ids`, JSON.stringify(ids))
 }
 
 const getAllItems = (): ChecklistItem[] => {
@@ -98,7 +100,7 @@ const getAllItems = (): ChecklistItem[] => {
 
 const loadItemOrderFromLS = () => {
   const allItems = getAllItems()
-  const savedOrder = localStorage.getItem(`${props.checklistId}-order`)
+  const savedOrder = localStorage.getItem(`${lsPrefix()}-order`)
   if (savedOrder) {
     try {
       const orderIds: string[] = JSON.parse(savedOrder)
@@ -121,13 +123,13 @@ const loadItemOrderFromLS = () => {
 
 const saveItemOrderToLS = () => {
   const orderIds = checklistItems.value.map(i => i.id)
-  localStorage.setItem(`${props.checklistId}-order`, JSON.stringify(orderIds))
+  localStorage.setItem(`${lsPrefix()}-order`, JSON.stringify(orderIds))
 }
 
 const loadCheckedStateFromLS = () => {
   const saved: Record<string, boolean> = {}
   checklistItems.value.forEach(item => {
-    const val = localStorage.getItem(`${props.checklistId}-${item.id}`)
+    const val = localStorage.getItem(`${lsPrefix()}-${item.id}`)
     saved[item.id] = val === 'true'
   })
   checkedItems.value = saved
@@ -136,7 +138,7 @@ const loadCheckedStateFromLS = () => {
 const loadCustomLabelsFromLS = () => {
   const saved: Record<string, string> = {}
   checklistItems.value.forEach(item => {
-    const val = localStorage.getItem(`${props.checklistId}-${item.id}-label`)
+    const val = localStorage.getItem(`${lsPrefix()}-${item.id}-label`)
     if (val) saved[item.id] = val
   })
   customLabels.value = saved
@@ -216,10 +218,10 @@ const applyFirestoreData = (data: ChecklistData) => {
   saveItemOrderToLS()
   saveCustomItemsToLS(data.customItems)
   Object.entries(data.checkedItems).forEach(([id, checked]) => {
-    localStorage.setItem(`${props.checklistId}-${id}`, String(checked))
+    localStorage.setItem(`${lsPrefix()}-${id}`, String(checked))
   })
   Object.entries(data.customLabels).forEach(([id, label]) => {
-    localStorage.setItem(`${props.checklistId}-${id}-label`, label)
+    localStorage.setItem(`${lsPrefix()}-${id}-label`, label)
   })
 }
 
@@ -278,7 +280,7 @@ watch(
   checkedItems,
   (newValue) => {
     Object.entries(newValue).forEach(([id, checked]) => {
-      localStorage.setItem(`${props.checklistId}-${id}`, String(checked))
+      localStorage.setItem(`${lsPrefix()}-${id}`, String(checked))
     })
     scheduleSaveToFirestore()
   },
@@ -323,7 +325,7 @@ const saveEdit = (id: string) => {
   const trimmedText = editingText.value.trim()
   if (trimmedText) {
     customLabels.value = { ...customLabels.value, [id]: trimmedText }
-    localStorage.setItem(`${props.checklistId}-${id}-label`, trimmedText)
+    localStorage.setItem(`${lsPrefix()}-${id}-label`, trimmedText)
 
     const item = checklistItems.value.find(item => item.id === id)
     if (item && item.label === '') {
@@ -374,14 +376,14 @@ const deleteItem = (id: string) => {
     const newCheckedItems = { ...checkedItems.value }
     delete newCheckedItems[id]
     checkedItems.value = newCheckedItems
-    localStorage.removeItem(`${props.checklistId}-${id}`)
+    localStorage.removeItem(`${lsPrefix()}-${id}`)
   }
 
   if (customLabels.value[id]) {
     const newCustomLabels = { ...customLabels.value }
     delete newCustomLabels[id]
     customLabels.value = newCustomLabels
-    localStorage.removeItem(`${props.checklistId}-${id}-label`)
+    localStorage.removeItem(`${lsPrefix()}-${id}-label`)
   }
 
   saveItemOrderToLS()
@@ -519,7 +521,7 @@ const handleReset = () => {
   const resetState: Record<string, boolean> = {}
   checklistItems.value.forEach(item => {
     resetState[item.id] = false
-    localStorage.removeItem(`${props.checklistId}-${item.id}`)
+    localStorage.removeItem(`${lsPrefix()}-${item.id}`)
   })
   checkedItems.value = resetState
   scheduleSaveToFirestore()
