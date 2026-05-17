@@ -10,33 +10,17 @@ import {
 
 const defaultChecklists: ChecklistConfig[] = [
   {
-    id: 'morning',
-    label: '朝やること',
+    id: 'tutorial',
+    label: 'チュートリアル',
     initialItems: [
-      { id: 'morning-tea-coffee', label: '紅茶、コーヒー' },
-      { id: 'morning-lunch', label: '弁当' },
-      { id: 'morning-breakfast', label: '朝食' },
-      { id: 'morning-medicine', label: 'クスリ' },
-      { id: 'morning-prewash', label: '予洗い' },
-      { id: 'morning-bag', label: 'カバンの中' },
-      { id: 'morning-garbage', label: 'ゴミまとめ' },
-      { id: 'morning-preparation', label: '出発準備' },
-      { id: 'morning-change', label: '着替え' },
-      { id: 'morning-brush', label: '歯みがき' },
-    ]
-  },
-  {
-    id: 'bag',
-    label: 'カバンの中',
-    initialItems: [
-      { id: 'bag-mask', label: 'マスク、手帳、教材' },
-      { id: 'bag-keys', label: 'カギ、イヤホン、社員証' },
-      { id: 'bag-card-case', label: '名刺入れ、クシ、ハンカチ' },
-      { id: 'bag-pen-case', label: '筆箱、充電器、財布、(日傘)' },
-      { id: 'bag-pouch', label: 'ポーチ類、(化粧ポーチ)' },
-      { id: 'bag-lunch', label: '弁当、カトラリー' },
-      { id: 'bag-toothbrush', label: '(歯ブラシ)' },
-      { id: 'bag-bottle', label: '水筒' },
+      { id: 'tutorial-check', label: 'タスクをタップしてチェックを入れてみよう' },
+      { id: 'tutorial-reset', label: '「すべてリセット」でチェックをまとめて外してみよう' },
+      { id: 'tutorial-edit-mode', label: '「項目を編集」ボタンで編集モードに切り替えてみよう' },
+      { id: 'tutorial-edit', label: '編集モードで鉛筆アイコンをタップしてタスク名を変えてみよう' },
+      { id: 'tutorial-reorder', label: '編集モードでドラッグしてタスクを並び替えてみよう' },
+      { id: 'tutorial-delete', label: '編集モードでゴミ箱アイコンをタップしてタスクを削除してみよう' },
+      { id: 'tutorial-add', label: '編集モードで「新しい項目を追加」からタスクを追加してみよう' },
+      { id: 'tutorial-new-list', label: 'ナビの「＋」ボタンで新しいチェックリストを作ってみよう' },
     ]
   }
 ]
