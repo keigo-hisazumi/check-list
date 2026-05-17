@@ -22,7 +22,8 @@ export interface ChecklistData {
   customItems: ChecklistItem[]
   order: string[]
   checkedItems: Record<string, boolean>
-  customLabels: Record<string, string>
+  // Legacy fields, no longer written (kept for migration reads)
+  customLabels?: Record<string, string>
   deletedInitialIds?: string[]
 }
 
