@@ -36,17 +36,31 @@ export function subscribeChecklistsConfig(
   const ref = doc(db, 'users', uid, 'data', 'config')
   return onSnapshot(ref, (snap) => {
     if (snap.exists()) {
-      callback(snap.data().checklists as ChecklistConfig[])
+      const data = snap.data()
+      const rawChecklists = data.checklists as (string | ChecklistConfig)[]
+      const labels: Record<string, string> = data.labels ?? {}
+      const checklists: ChecklistConfig[] = rawChecklists.map(item => {
+        if (typeof item === 'string') {
+          return { id: item, label: labels[item] ?? item, initialItems: [] }
+        } else {
+          // 旧フォーマット（移行用）: オブジェクト形式
+          return { id: item.id, label: item.label, initialItems: [] }
+        }
+      })
+      callback(checklists)
     } else {
       callback(null)
     }
   })
 }
 
-// ユーザーのチェックリスト設定を保存
+// ユーザーのチェックリスト設定を保存（checklists にはIDのみ、ラベルは labels フィールドで管理）
 export async function saveChecklistsConfig(uid: string, checklists: ChecklistConfig[]): Promise<void> {
   const ref = doc(db, 'users', uid, 'data', 'config')
-  await setDoc(ref, { checklists })
+  const ids = checklists.map(c => c.id)
+  const labels: Record<string, string> = {}
+  checklists.forEach(c => { labels[c.id] = c.label })
+  await setDoc(ref, { checklists: ids, labels })
 }
 
 // checklists コレクション内のドキュメント ID 一覧をリアルタイム購読
