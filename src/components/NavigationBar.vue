@@ -35,6 +35,8 @@ const emit = defineEmits<Emits>()
 const editingText = ref<string>('')
 const inputRef = ref<HTMLInputElement | null>(null)
 const isMenuOpen = ref(false)
+const navScrollRef = ref<HTMLElement | null>(null)
+const navItemRefs = ref<Record<string, HTMLElement | null>>({})
 
 const handleNavClick = (id: string) => {
   emit('nav-change', id)
@@ -85,7 +87,7 @@ watch(() => props.isEditMode, async (newValue) => {
   }
 })
 
-watch(() => props.activeItem, async () => {
+watch(() => props.activeItem, async (id) => {
   if (props.isEditMode) {
     const activeNavItem = props.navItems.find(item => item.id === props.activeItem)
     if (activeNavItem) {
@@ -93,6 +95,11 @@ watch(() => props.activeItem, async () => {
       await nextTick()
       inputRef.value?.focus()
     }
+  }
+  await nextTick()
+  const el = navItemRefs.value[id]
+  if (el && navScrollRef.value) {
+    el.scrollIntoView({ behavior: 'smooth', block: 'nearest', inline: 'center' })
   }
 })
 </script>
@@ -114,10 +121,11 @@ watch(() => props.activeItem, async () => {
       <!-- 通常のナビゲーションUI -->
       <template v-else>
         <!-- スクロール可能なナビ部分 -->
-        <div class="nav-items-scroll">
+        <div ref="navScrollRef" class="nav-items-scroll" @touchstart.stop @touchmove.stop @touchend.stop>
           <button
             v-for="item in navItems"
             :key="item.id"
+            :ref="el => { navItemRefs[item.id] = el as HTMLElement | null }"
             :class="['nav-item', { active: props.activeItem === item.id }]"
             @click="handleNavClick(item.id)"
           >
