@@ -6,6 +6,7 @@ import {
   subscribeChecklistsConfig,
   subscribeChecklistIds,
   saveChecklistsConfig,
+  saveChecklistLabel,
   type ChecklistConfig
 } from '../firebase/firestore'
 
@@ -33,9 +34,11 @@ export function useChecklistConfigSync(user: Ref<User | null>) {
   let configUnsubscribe: Unsubscribe | null = null
   let checklistIdsUnsubscribe: Unsubscribe | null = null
   let isSavingToFirestore = false
-  let lastFirestoreJson = ''
+  let lastSavedIds = ''
+  let lastSavedLabels = ''
   let configLoaded = false
-  let knownChecklistIds: string[] = []
+  let configOrderedIds: string[] | null = null
+  let checklistDocsInfo: Array<{ id: string; label?: string }> = []
 
   const lsKey = () => `checklists-config-${user.value?.uid ?? 'guest'}`
 
@@ -64,27 +67,54 @@ export function useChecklistConfigSync(user: Ref<User | null>) {
   }
 
   const saveToFirestore = async (uid: string) => {
-    const json = JSON.stringify(checklists.value)
-    if (json === lastFirestoreJson) return
+    const ids = checklists.value.map(c => c.id)
+    const idsJson = JSON.stringify(ids)
+    const labelsJson = JSON.stringify(Object.fromEntries(checklists.value.map(c => [c.id, c.label])))
+    if (idsJson === lastSavedIds && labelsJson === lastSavedLabels) return
+
     isSavingToFirestore = true
     try {
-      await saveChecklistsConfig(uid, checklists.value)
-      lastFirestoreJson = json
+      if (idsJson !== lastSavedIds) {
+        await saveChecklistsConfig(uid, ids)
+        lastSavedIds = idsJson
+      }
+      if (labelsJson !== lastSavedLabels) {
+        await Promise.all(checklists.value.map(c => saveChecklistLabel(uid, c.id, c.label)))
+        lastSavedLabels = labelsJson
+      }
     } finally {
       isSavingToFirestore = false
     }
   }
 
-  // config に無いが checklists コレクションに存在するリストを config へ追加する
-  const mergeOrphanedChecklists = () => {
-    if (!configLoaded) return
-    const configIds = new Set(checklists.value.map(c => c.id))
-    const orphaned = knownChecklistIds.filter(id => !configIds.has(id))
-    if (orphaned.length === 0) return
-    checklists.value = [
-      ...checklists.value,
-      ...orphaned.map(id => ({ id, label: 'チェックリスト', initialItems: [] as ChecklistConfig['initialItems'] }))
-    ]
+  // config の IDs とチェックリスト document のラベルを組み合わせて checklists を構築する
+  const rebuildFromFirestoreData = () => {
+    if (configOrderedIds === null) return
+
+    const docsMap = new Map(checklistDocsInfo.map(d => [d.id, d.label]))
+    const existingMap = new Map(checklists.value.map(c => [c.id, c]))
+
+    const configChecklists = configOrderedIds.map(id => ({
+      id,
+      label: docsMap.get(id) ?? existingMap.get(id)?.label ?? id,
+      initialItems: existingMap.get(id)?.initialItems ?? ([] as ChecklistConfig['initialItems'])
+    }))
+
+    // config にないが checklists コレクションに存在するものを追加
+    const configIdSet = new Set(configOrderedIds)
+    const orphans = checklistDocsInfo
+      .filter(d => !configIdSet.has(d.id))
+      .map(d => ({
+        id: d.id,
+        label: d.label ?? 'チェックリスト',
+        initialItems: [] as ChecklistConfig['initialItems']
+      }))
+
+    checklists.value = [...configChecklists, ...orphans]
+
+    if (!checklists.value.find(c => c.id === activeView.value) && checklists.value.length > 0) {
+      activeView.value = checklists.value[0].id
+    }
   }
 
   const stopFirestoreSync = () => {
@@ -101,40 +131,43 @@ export function useChecklistConfigSync(user: Ref<User | null>) {
   const startFirestoreSync = (uid: string) => {
     stopFirestoreSync()
     configLoaded = false
-    knownChecklistIds = []
+    configOrderedIds = null
+    checklistDocsInfo = []
 
-    configUnsubscribe = subscribeChecklistsConfig(uid, (remoteChecklists) => {
+    configUnsubscribe = subscribeChecklistsConfig(uid, (ids) => {
       if (isSavingToFirestore) return
       configLoaded = true
-      if (remoteChecklists) {
-        const json = JSON.stringify(remoteChecklists)
-        if (json === lastFirestoreJson) return
-        lastFirestoreJson = json
-        checklists.value = remoteChecklists
-        if (!checklists.value.find(c => c.id === activeView.value) && checklists.value.length > 0) {
-          activeView.value = checklists.value[0].id
-        }
-      }
-      mergeOrphanedChecklists()
-      if (!remoteChecklists) {
+
+      if (ids !== null) {
+        const idsJson = JSON.stringify(ids)
+        if (idsJson === lastSavedIds) return
+        lastSavedIds = idsJson
+        configOrderedIds = ids
+        rebuildFromFirestoreData()
+      } else {
+        // Firestore に config がなければ現在の状態を保存
         saveToFirestore(uid)
       }
     })
 
-    checklistIdsUnsubscribe = subscribeChecklistIds(uid, (ids) => {
-      knownChecklistIds = ids
-      mergeOrphanedChecklists()
+    checklistIdsUnsubscribe = subscribeChecklistIds(uid, (docs) => {
+      checklistDocsInfo = docs
+      if (configLoaded) {
+        rebuildFromFirestoreData()
+      }
     })
   }
 
   watch(user, (newUser, oldUser) => {
     if (newUser) {
-      lastFirestoreJson = ''
+      lastSavedIds = ''
+      lastSavedLabels = ''
       loadFromLocalStorage()
       startFirestoreSync(newUser.uid)
     } else if (oldUser && !newUser) {
       stopFirestoreSync()
-      lastFirestoreJson = ''
+      lastSavedIds = ''
+      lastSavedLabels = ''
       loadFromLocalStorage()
     }
   })
