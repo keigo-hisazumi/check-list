@@ -35,6 +35,8 @@ export function useChecklistConfigSync(user: Ref<User | null>) {
   let checklistIdsUnsubscribe: Unsubscribe | null = null
   // config 保存中のみ true にする（ラベル保存は含めない）
   let isSavingToFirestore = false
+  // Firestore から最初のスナップショットを受け取るまで保存しない（ローカルデータで上書きを防ぐ）
+  let hasSyncedFromFirestore = false
   let lastSavedIds = ''
   let lastSavedLabels = ''
   let configLoaded = false
@@ -79,6 +81,9 @@ export function useChecklistConfigSync(user: Ref<User | null>) {
   }
 
   const saveToFirestore = async (uid: string) => {
+    // Firestore から初回データを受け取る前は保存しない（他デバイスのローカルデータで上書きを防ぐ）
+    if (!hasSyncedFromFirestore) return
+
     const ids = checklists.value.map(c => c.id)
     const idsJson = JSON.stringify(ids)
     if (idsJson === lastSavedIds) {
@@ -108,11 +113,13 @@ export function useChecklistConfigSync(user: Ref<User | null>) {
       checklistIdsUnsubscribe()
       checklistIdsUnsubscribe = null
     }
+    hasSyncedFromFirestore = false
   }
 
   const startFirestoreSync = (uid: string) => {
     stopFirestoreSync()
     configLoaded = false
+    hasSyncedFromFirestore = false
     remoteConfigIds = null
     checklistDocsInfo = []
 
@@ -120,6 +127,7 @@ export function useChecklistConfigSync(user: Ref<User | null>) {
     configUnsubscribe = subscribeChecklistsConfig(uid, (ids) => {
       if (isSavingToFirestore) return
       configLoaded = true
+      hasSyncedFromFirestore = true
 
       if (ids !== null) {
         const idsJson = JSON.stringify(ids)
