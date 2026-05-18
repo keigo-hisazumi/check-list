@@ -124,14 +124,11 @@ const loadCheckedStateFromLS = () => {
 
 // ---- Firestore ヘルパー ----
 
-// label は subscribeChecklistIds 側で同期するため比較対象から除外する。
-// label フィールドの有無が Firestore のエコー毎に変わることがあり、含めると無限ループになる。
-// customItems の要素内キー順も Firestore と保存時で異なる場合があるため正規化する。
+// customItems の要素内キー順が Firestore と保存時で異なる場合があるため正規化する。
 const serializeForCompare = (data: ChecklistData): string => {
   const normalizedItems = (data.customItems ?? []).map(i => ({ id: i.id, label: i.label }))
   return JSON.stringify({
     customItems: normalizedItems,
-    order: data.order ?? [],
     checkedItems: data.checkedItems ?? {},
   })
 }
@@ -139,9 +136,7 @@ const serializeForCompare = (data: ChecklistData): string => {
 // 現在の状態を ChecklistData にまとめる
 const buildChecklistData = (): ChecklistData => {
   return {
-    label: props.label,
     customItems: [...checklistItems.value],
-    order: checklistItems.value.map(i => i.id),
     checkedItems: { ...checkedItems.value },
   }
 }
@@ -172,9 +167,11 @@ const scheduleSaveToFirestore = () => {
 
 // Firestoreのデータを状態に適用
 const applyFirestoreData = (data: ChecklistData) => {
-  // 旧フォーマットからの移行: 削除済み初期アイテムと customLabels を考慮して統合
-  const legacyDeletedIds = new Set(data.deletedInitialIds ?? [])
-  const legacyCustomLabels = data.customLabels ?? {}
+  // レガシーフィールド（旧フォーマット移行用）
+  type Legacy = { order?: string[]; customLabels?: Record<string, string>; deletedInitialIds?: string[] }
+  const legacy = data as ChecklistData & Legacy
+  const legacyDeletedIds = new Set(legacy.deletedInitialIds ?? [])
+  const legacyCustomLabels = legacy.customLabels ?? {}
   const customItemIds = new Set(data.customItems.map(i => i.id))
 
   const allCustomItems = data.customItems.map(item => ({
@@ -188,21 +185,27 @@ const applyFirestoreData = (data: ChecklistData) => {
     }
   }
 
-  const customItemMap = new Map(allCustomItems.map(i => [i.id, i]))
-  const allItems: ChecklistItem[] = []
-  data.order.forEach(id => {
-    if (customItemMap.has(id)) allItems.push(customItemMap.get(id)!)
-  })
-  allCustomItems.forEach(i => {
-    if (!data.order.includes(i.id)) allItems.push(i)
-  })
+  // 旧フォーマットに order フィールドがある場合はそれを順序の正とし、なければ customItems の配列順を使う
+  let orderedItems: ChecklistItem[]
+  if (legacy.order && legacy.order.length > 0) {
+    const itemMap = new Map(allCustomItems.map(i => [i.id, i]))
+    orderedItems = []
+    legacy.order.forEach(id => {
+      if (itemMap.has(id)) orderedItems.push(itemMap.get(id)!)
+    })
+    allCustomItems.forEach(i => {
+      if (!legacy.order!.includes(i.id)) orderedItems.push(i)
+    })
+  } else {
+    orderedItems = allCustomItems
+  }
 
-  checklistItems.value = allItems
+  checklistItems.value = orderedItems
   checkedItems.value = { ...data.checkedItems }
 
   // ローカルストレージにもキャッシュ
   saveItemOrderToLS()
-  saveCustomItemsToLS(allItems)
+  saveCustomItemsToLS(orderedItems)
   Object.entries(data.checkedItems).forEach(([id, checked]) => {
     localStorage.setItem(`${lsPrefix()}-${id}`, String(checked))
   })
@@ -216,17 +219,20 @@ const startFirestoreSync = () => {
     if (isSavingToFirestore) return
     hasSyncedFromFirestore = true
     if (data) {
-      const json = serializeForCompare(data as ChecklistData)
+      const json = serializeForCompare(data)
       if (json === lastFirestoreJson) return
       lastFirestoreJson = json
       applyFirestoreData(data)
       // label フィールドがない旧フォーマットのドキュメントにラベルを書き込む（移行処理）
-      if (!data.label && props.label && props.uid) {
+      if (!(data as ChecklistData & { label?: string }).label && props.label && props.uid) {
         saveChecklistLabel(props.uid, props.checklistId, props.label).catch(console.error)
       }
     } else {
-      // Firestoreにデータがなければローカルのデータをアップロード
+      // Firestoreにデータがなければローカルのデータをアップロードし、ラベルも書き込む
       scheduleSaveToFirestore()
+      if (props.uid && props.label) {
+        saveChecklistLabel(props.uid, props.checklistId, props.label).catch(console.error)
+      }
     }
   })
 }
@@ -373,20 +379,13 @@ const deleteItem = (id: string) => {
   const customItems = loadCustomItemsFromLS()
   saveCustomItemsToLS(customItems.filter(item => item.id !== id))
 
-  if (checkedItems.value[id]) {
-    const newCheckedItems = { ...checkedItems.value }
-    delete newCheckedItems[id]
-    checkedItems.value = newCheckedItems
-    localStorage.removeItem(`${lsPrefix()}-${id}`)
-  }
+  const newCheckedItems = { ...checkedItems.value }
+  delete newCheckedItems[id]
+  checkedItems.value = newCheckedItems
+  localStorage.removeItem(`${lsPrefix()}-${id}`)
 
   saveItemOrderToLS()
   scheduleSaveToFirestore()
-}
-
-// 表示用のラベルを取得
-const getDisplayLabel = (item: ChecklistItem): string => {
-  return item.label
 }
 
 const getElementTotalHeight = (element: HTMLElement): number => {
@@ -571,7 +570,7 @@ defineExpose({
           :for="item.id"
           @click.prevent="!isEditMode && handleCheckChange(item.id)"
         >
-          {{ getDisplayLabel(item) }}
+          {{ item.label }}
         </label>
         <button
           v-if="editingItemId !== item.id && !isEditMode"
