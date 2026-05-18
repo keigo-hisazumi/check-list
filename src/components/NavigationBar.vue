@@ -37,6 +37,7 @@ const inputRef = ref<HTMLInputElement | null>(null)
 const isMenuOpen = ref(false)
 const navScrollRef = ref<HTMLElement | null>(null)
 const navItemRefs = ref<Record<string, HTMLElement | null>>({})
+let editingItemId: string | null = null
 
 const handleNavClick = (id: string) => {
   emit('nav-change', id)
@@ -71,19 +72,21 @@ watch(() => props.isEditMode, async (newValue) => {
   if (newValue) {
     const activeNavItem = props.navItems.find(item => item.id === props.activeItem)
     if (activeNavItem) {
+      editingItemId = props.activeItem
       editingText.value = activeNavItem.label
       await nextTick()
       inputRef.value?.focus()
     }
   } else {
     const trimmedText = editingText.value.trim()
-    if (trimmedText) {
+    if (trimmedText && editingItemId === props.activeItem) {
       const activeNavItem = props.navItems.find(item => item.id === props.activeItem)
       if (activeNavItem && trimmedText !== activeNavItem.label) {
         emit('update-checklist-name', props.activeItem, trimmedText)
       }
     }
     editingText.value = ''
+    editingItemId = null
   }
 })
 
@@ -91,6 +94,7 @@ watch(() => props.activeItem, async (id) => {
   if (props.isEditMode) {
     const activeNavItem = props.navItems.find(item => item.id === props.activeItem)
     if (activeNavItem) {
+      editingItemId = id
       editingText.value = activeNavItem.label
       await nextTick()
       inputRef.value?.focus()
