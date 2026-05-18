@@ -121,6 +121,7 @@ const handleDeleteChecklist = (id: string) => {
   localStorage.removeItem(`${uid}-${id}-deleted-initial-ids`)
   if (user.value) deleteChecklistData(user.value.uid, id).catch(console.error)
   if (activeView.value === id) activeView.value = checklists.value[0].id
+  isEditMode.value = false
 }
 
 const handleUpdateChecklistName = (id: string, newName: string) => {
