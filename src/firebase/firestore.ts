@@ -22,6 +22,7 @@ export interface ChecklistConfig {
 export interface ChecklistData {
   customItems: ChecklistItem[]
   checkedItems: Record<string, boolean>
+  deletedInitialIds?: string[]
 }
 
 // ユーザーのチェックリスト設定をリアルタイム購読（config には ID のみ保持）

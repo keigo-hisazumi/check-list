@@ -136,9 +136,12 @@ const serializeForCompare = (data: ChecklistData): string => {
 
 // 現在の状態を ChecklistData にまとめる
 const buildChecklistData = (): ChecklistData => {
+  const deletedStr = localStorage.getItem(`${lsPrefix()}-deleted-initial-ids`)
+  const deletedInitialIds: string[] = deletedStr ? JSON.parse(deletedStr) : []
   return {
     customItems: [...checklistItems.value],
     checkedItems: { ...checkedItems.value },
+    ...(deletedInitialIds.length > 0 ? { deletedInitialIds } : {}),
   }
 }
 
@@ -210,6 +213,9 @@ const applyFirestoreData = (data: ChecklistData) => {
   Object.entries(data.checkedItems).forEach(([id, checked]) => {
     localStorage.setItem(`${lsPrefix()}-${id}`, String(checked))
   })
+  if (legacy.deletedInitialIds && legacy.deletedInitialIds.length > 0) {
+    localStorage.setItem(`${lsPrefix()}-deleted-initial-ids`, JSON.stringify(legacy.deletedInitialIds))
+  }
 }
 
 // Firestoreの購読を開始
@@ -379,11 +385,22 @@ const addNewItem = async () => {
 
 // アイテムを削除
 const deleteItem = (id: string) => {
-  if (!confirm('この項目を削除しますか？')) return
+  const isInitial = props.initialItems.some(item => item.id === id)
+  const message = isInitial ? '初期項目を削除しますか？' : 'この項目を削除しますか？'
+  if (!confirm(message)) return
 
   checklistItems.value = checklistItems.value.filter(item => item.id !== id)
   const customItems = loadCustomItemsFromLS()
   saveCustomItemsToLS(customItems.filter(item => item.id !== id))
+
+  if (isInitial) {
+    const deletedStr = localStorage.getItem(`${lsPrefix()}-deleted-initial-ids`)
+    const deletedIds: string[] = deletedStr ? JSON.parse(deletedStr) : []
+    if (!deletedIds.includes(id)) {
+      deletedIds.push(id)
+      localStorage.setItem(`${lsPrefix()}-deleted-initial-ids`, JSON.stringify(deletedIds))
+    }
+  }
 
   const newCheckedItems = { ...checkedItems.value }
   delete newCheckedItems[id]
