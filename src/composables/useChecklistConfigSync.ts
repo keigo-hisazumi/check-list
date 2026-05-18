@@ -6,7 +6,6 @@ import {
   subscribeChecklistsConfig,
   subscribeChecklistIds,
   saveChecklistsConfig,
-  saveChecklistLabel,
   type ChecklistConfig
 } from '../firebase/firestore'
 
@@ -33,12 +32,10 @@ export function useChecklistConfigSync(user: Ref<User | null>) {
 
   let configUnsubscribe: Unsubscribe | null = null
   let checklistIdsUnsubscribe: Unsubscribe | null = null
-  // config 保存中のみ true にする（ラベル保存は含めない）
   let isSavingToFirestore = false
   // Firestore から最初のスナップショットを受け取るまで保存しない（ローカルデータで上書きを防ぐ）
   let hasSyncedFromFirestore = false
   let lastSavedIds = ''
-  let lastSavedLabels = ''
   let configLoaded = false
   let remoteConfigIds: string[] | null = null
   let checklistDocsInfo: Array<{ id: string; label?: string }> = []
@@ -69,28 +66,13 @@ export function useChecklistConfigSync(user: Ref<User | null>) {
     localStorage.setItem(lsKey(), JSON.stringify(checklists.value))
   }
 
-  // ラベルを既存ドキュメントのみに非ブロッキングで保存する
-  // isSavingToFirestore の外で呼ぶことで、ラベル保存中でも削除等が即座に保存できる
-  const saveLabelsToDocs = (uid: string) => {
-    const existingDocIds = new Set(checklistDocsInfo.map(d => d.id))
-    const targets = checklists.value.filter(c => existingDocIds.has(c.id))
-    const labelsJson = JSON.stringify(Object.fromEntries(targets.map(c => [c.id, c.label])))
-    if (labelsJson === lastSavedLabels) return
-    lastSavedLabels = labelsJson
-    targets.forEach(c => saveChecklistLabel(uid, c.id, c.label).catch(console.error))
-  }
-
   const saveToFirestore = async (uid: string) => {
     // Firestore から初回データを受け取る前は保存しない（他デバイスのローカルデータで上書きを防ぐ）
     if (!hasSyncedFromFirestore) return
 
     const ids = checklists.value.map(c => c.id)
     const idsJson = JSON.stringify(ids)
-    if (idsJson === lastSavedIds) {
-      // IDs に変更がなくてもラベルが変わっている場合は保存
-      saveLabelsToDocs(uid)
-      return
-    }
+    if (idsJson === lastSavedIds) return
 
     isSavingToFirestore = true
     try {
@@ -99,9 +81,6 @@ export function useChecklistConfigSync(user: Ref<User | null>) {
     } finally {
       isSavingToFirestore = false
     }
-
-    // config 保存が完了してから非ブロッキングでラベルを保存
-    saveLabelsToDocs(uid)
   }
 
   const stopFirestoreSync = () => {
@@ -198,22 +177,17 @@ export function useChecklistConfigSync(user: Ref<User | null>) {
       if (changed || newOrphans.length > 0) {
         checklists.value = [...updated, ...newOrphans]
       }
-
-      // document が新たに現れた際（GenericChecklist が初回保存した直後など）にラベルを同期する
-      saveLabelsToDocs(uid)
     })
   }
 
   watch(user, (newUser, oldUser) => {
     if (newUser) {
       lastSavedIds = ''
-      lastSavedLabels = ''
       loadFromLocalStorage()
       startFirestoreSync(newUser.uid)
     } else if (oldUser && !newUser) {
       stopFirestoreSync()
       lastSavedIds = ''
-      lastSavedLabels = ''
       loadFromLocalStorage()
     }
   })

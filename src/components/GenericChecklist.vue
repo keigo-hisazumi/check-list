@@ -11,6 +11,7 @@ import type { Unsubscribe } from 'firebase/firestore'
 // Props定義
 interface Props {
   checklistId: string
+  label: string
   initialItems: ChecklistItem[]
   isActive?: boolean
   uid?: string
@@ -125,6 +126,7 @@ const loadCheckedStateFromLS = () => {
 // 現在の状態を ChecklistData にまとめる
 const buildChecklistData = (): ChecklistData => {
   return {
+    label: props.label,
     customItems: [...checklistItems.value],
     order: checklistItems.value.map(i => i.id),
     checkedItems: { ...checkedItems.value },
@@ -218,6 +220,11 @@ const stopFirestoreSync = () => {
     firestoreUnsubscribe = null
   }
 }
+
+// label が変わったら保存（ラベル変更を Firestore に反映する）
+watch(() => props.label, () => {
+  scheduleSaveToFirestore()
+})
 
 // uid が変わったら購読を再設定
 watch(() => props.uid, (newUid) => {

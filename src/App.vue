@@ -173,6 +173,7 @@ const handleUpdateChecklistName = (id: string, newName: string) => {
           <GenericChecklist
             :ref="el => { checklistRefs[checklist.id] = el as InstanceType<typeof GenericChecklist> | null }"
             :checklist-id="checklist.id"
+            :label="checklist.label"
             :initial-items="checklist.initialItems"
             :is-active="activeView === checklist.id"
             :uid="user.uid"

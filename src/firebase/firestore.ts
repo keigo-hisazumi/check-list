@@ -54,12 +54,6 @@ export async function saveChecklistsConfig(uid: string, ids: string[]): Promise<
   await setDoc(ref, { checklists: ids })
 }
 
-// チェックリストのラベルをチェックリスト document に保存（merge）
-export async function saveChecklistLabel(uid: string, checklistId: string, label: string): Promise<void> {
-  const ref = doc(db, 'users', uid, 'checklists', checklistId)
-  await setDoc(ref, { label }, { merge: true })
-}
-
 // checklists コレクション内のドキュメント ID とラベルをリアルタイム購読
 export function subscribeChecklistIds(
   uid: string,
