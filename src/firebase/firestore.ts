@@ -21,12 +21,7 @@ export interface ChecklistConfig {
 
 export interface ChecklistData {
   customItems: ChecklistItem[]
-  order: string[]
   checkedItems: Record<string, boolean>
-  label?: string
-  // Legacy fields, no longer written (kept for migration reads)
-  customLabels?: Record<string, string>
-  deletedInitialIds?: string[]
 }
 
 // ユーザーのチェックリスト設定をリアルタイム購読（config には ID のみ保持）
