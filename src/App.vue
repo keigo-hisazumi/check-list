@@ -1,5 +1,5 @@
 <script setup lang="ts">
-import { ref, computed, watch, onBeforeUnmount } from 'vue'
+import { ref, computed, watch, onBeforeUnmount, nextTick } from 'vue'
 import NavigationBar, { type NavItem } from './components/NavigationBar.vue'
 import GenericChecklist from './components/GenericChecklist.vue'
 import LoginView from './components/LoginView.vue'
@@ -88,7 +88,7 @@ const handleResetOrDelete = () => {
   else handleReset()
 }
 
-const handleAddChecklist = () => {
+const handleAddChecklist = async () => {
   const name = prompt('新しいチェックリストの名前を入力してください：')
   if (!name?.trim()) return
   const newId = `checklist-${Date.now()}`
@@ -99,6 +99,9 @@ const handleAddChecklist = () => {
   }
   checklists.value.push(newChecklist)
   activeView.value = newId
+  await nextTick()
+  isEditMode.value = true
+  checklistRefs.value[newId]?.enableEditMode()
 }
 
 const handleDeleteChecklist = (id: string) => {
