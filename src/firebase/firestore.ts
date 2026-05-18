@@ -91,6 +91,16 @@ export async function saveChecklistData(
   await setDoc(ref, data)
 }
 
+// チェックリストのラベルのみを保存（マージ書き込み）
+export async function saveChecklistLabel(
+  uid: string,
+  checklistId: string,
+  label: string
+): Promise<void> {
+  const ref = doc(db, 'users', uid, 'checklists', checklistId)
+  await setDoc(ref, { label }, { merge: true })
+}
+
 // チェックリストデータを削除
 export async function deleteChecklistData(uid: string, checklistId: string): Promise<void> {
   const ref = doc(db, 'users', uid, 'checklists', checklistId)
