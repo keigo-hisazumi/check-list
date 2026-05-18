@@ -33,11 +33,11 @@ export function useChecklistConfigSync(user: Ref<User | null>) {
 
   let configUnsubscribe: Unsubscribe | null = null
   let checklistIdsUnsubscribe: Unsubscribe | null = null
+  // config 保存中のみ true にする（ラベル保存は含めない）
   let isSavingToFirestore = false
   let lastSavedIds = ''
   let lastSavedLabels = ''
   let configLoaded = false
-  // Firestoreから受信した最後の config の ID 順序（削除検出のための参照用）
   let remoteConfigIds: string[] | null = null
   let checklistDocsInfo: Array<{ id: string; label?: string }> = []
 
@@ -67,25 +67,36 @@ export function useChecklistConfigSync(user: Ref<User | null>) {
     localStorage.setItem(lsKey(), JSON.stringify(checklists.value))
   }
 
+  // ラベルを既存ドキュメントのみに非ブロッキングで保存する
+  // isSavingToFirestore の外で呼ぶことで、ラベル保存中でも削除等が即座に保存できる
+  const saveLabelsToDocs = (uid: string) => {
+    const existingDocIds = new Set(checklistDocsInfo.map(d => d.id))
+    const targets = checklists.value.filter(c => existingDocIds.has(c.id))
+    const labelsJson = JSON.stringify(Object.fromEntries(targets.map(c => [c.id, c.label])))
+    if (labelsJson === lastSavedLabels) return
+    lastSavedLabels = labelsJson
+    targets.forEach(c => saveChecklistLabel(uid, c.id, c.label).catch(console.error))
+  }
+
   const saveToFirestore = async (uid: string) => {
     const ids = checklists.value.map(c => c.id)
     const idsJson = JSON.stringify(ids)
-    const labelsJson = JSON.stringify(Object.fromEntries(checklists.value.map(c => [c.id, c.label])))
-    if (idsJson === lastSavedIds && labelsJson === lastSavedLabels) return
+    if (idsJson === lastSavedIds) {
+      // IDs に変更がなくてもラベルが変わっている場合は保存
+      saveLabelsToDocs(uid)
+      return
+    }
 
     isSavingToFirestore = true
     try {
-      if (idsJson !== lastSavedIds) {
-        await saveChecklistsConfig(uid, ids)
-        lastSavedIds = idsJson
-      }
-      if (labelsJson !== lastSavedLabels) {
-        await Promise.all(checklists.value.map(c => saveChecklistLabel(uid, c.id, c.label)))
-        lastSavedLabels = labelsJson
-      }
+      await saveChecklistsConfig(uid, ids)
+      lastSavedIds = idsJson
     } finally {
       isSavingToFirestore = false
     }
+
+    // config 保存が完了してから非ブロッキングでラベルを保存
+    saveLabelsToDocs(uid)
   }
 
   const stopFirestoreSync = () => {
@@ -166,7 +177,6 @@ export function useChecklistConfigSync(user: Ref<User | null>) {
       })
 
       // remoteConfigIds にも localState にもない document だけ orphan として追加
-      // （remoteConfigIds にある ID は config 側で管理されるため、ここでは追加しない）
       const localIds = new Set(checklists.value.map(c => c.id))
       const remoteConfigIdSet = new Set(remoteConfigIds)
       const newOrphans = docs
