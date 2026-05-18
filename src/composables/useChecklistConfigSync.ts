@@ -73,6 +73,8 @@ export function useChecklistConfigSync(user: Ref<User | null>) {
     const ids = checklists.value.map(c => c.id)
     const idsJson = JSON.stringify(ids)
     if (idsJson === lastSavedIds) return
+    // 保存中の場合はスキップ。完了後に再試行される
+    if (isSavingToFirestore) return
 
     isSavingToFirestore = true
     try {
@@ -80,6 +82,11 @@ export function useChecklistConfigSync(user: Ref<User | null>) {
       lastSavedIds = idsJson
     } finally {
       isSavingToFirestore = false
+      // 保存中に変更があった場合は再保存
+      const currentIds = JSON.stringify(checklists.value.map(c => c.id))
+      if (currentIds !== lastSavedIds) {
+        saveToFirestore(uid)
+      }
     }
   }
 
@@ -194,7 +201,7 @@ export function useChecklistConfigSync(user: Ref<User | null>) {
 
   watch(checklists, () => {
     saveToLocalStorage()
-    if (user.value && !isSavingToFirestore) {
+    if (user.value) {
       saveToFirestore(user.value.uid)
     }
   }, { deep: true })
