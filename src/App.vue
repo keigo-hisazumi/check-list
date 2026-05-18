@@ -113,6 +113,10 @@ const handleDeleteChecklist = (id: string) => {
   if (!checklist) return
   if (!confirm(`「${checklist.label}」を削除しますか？\n\n注意: チェックリスト内のすべてのデータが削除されます。`)) return
 
+  // Firestore 購読を先に停止しないと、deleteChecklistData 後に
+  // subscribeChecklistData が data=null を受け取りドキュメントを再作成してしまう
+  checklistRefs.value[id]?.stopFirestoreSync()
+
   const index = checklists.value.findIndex(c => c.id === id)
   checklists.value.splice(index, 1)
   const uid = user.value?.uid ?? 'guest'

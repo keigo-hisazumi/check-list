@@ -242,6 +242,10 @@ const stopFirestoreSync = () => {
     firestoreUnsubscribe()
     firestoreUnsubscribe = null
   }
+  if (saveTimer) {
+    clearTimeout(saveTimer)
+    saveTimer = null
+  }
 }
 
 // uid が変わったら購読を再設定
@@ -543,7 +547,8 @@ const disableEditMode = () => {
 defineExpose({
   handleReset,
   enableEditMode,
-  disableEditMode
+  disableEditMode,
+  stopFirestoreSync
 })
 </script>
 
