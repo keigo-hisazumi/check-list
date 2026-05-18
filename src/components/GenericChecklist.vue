@@ -145,7 +145,7 @@ const buildChecklistData = (): ChecklistData => {
 
 // Firestoreに保存（重複保存を避けるためdebounce的に制御）
 let saveTimer: ReturnType<typeof setTimeout> | null = null
-const scheduleSaveToFirestore = () => {
+const scheduleSaveToFirestore = (reason?: string) => {
   if (!props.uid) return
   // Firestore から最初のスナップショットを受け取る前は保存しない（ローカルの古いデータで上書きを防ぐ）
   if (!hasSyncedFromFirestore) return
@@ -154,7 +154,14 @@ const scheduleSaveToFirestore = () => {
     if (!props.uid) return
     const data = buildChecklistData()
     const json = serializeForCompare(data)
-    if (json === lastFirestoreJson) return
+    if (json === lastFirestoreJson) {
+      console.debug(`[${props.checklistId}] scheduleSave(${reason}): skip (no change)`)
+      return
+    }
+    console.warn(`[${props.checklistId}] scheduleSave(${reason}): SAVING. diff:`, {
+      prev: JSON.parse(lastFirestoreJson || 'null'),
+      next: JSON.parse(json)
+    })
     isSavingToFirestore = true
     try {
       await saveChecklistData(props.uid, props.checklistId, data)
@@ -210,16 +217,20 @@ const startFirestoreSync = () => {
   if (!props.uid) return
   stopFirestoreSync()
   firestoreUnsubscribe = subscribeChecklistData(props.uid, props.checklistId, (data) => {
-    if (isSavingToFirestore) return
+    if (isSavingToFirestore) { console.debug(`[${props.checklistId}] subscribeChecklistData: skip (saving)`); return }
     hasSyncedFromFirestore = true
     if (data) {
       const json = serializeForCompare(data as ChecklistData)
-      if (json === lastFirestoreJson) return
+      if (json === lastFirestoreJson) { console.debug(`[${props.checklistId}] subscribeChecklistData: skip (no change)`); return }
+      console.warn(`[${props.checklistId}] subscribeChecklistData: applying. diff:`, {
+        prev: JSON.parse(lastFirestoreJson || 'null'),
+        next: JSON.parse(json)
+      })
       lastFirestoreJson = json
       applyFirestoreData(data)
     } else {
       // Firestoreにデータがなければローカルのデータをアップロード
-      scheduleSaveToFirestore()
+      scheduleSaveToFirestore('no-doc')
     }
   })
 }
@@ -232,8 +243,9 @@ const stopFirestoreSync = () => {
 }
 
 // label が変わったら保存（ラベル変更を Firestore に反映する）
-watch(() => props.label, () => {
-  scheduleSaveToFirestore()
+watch(() => props.label, (newLabel, oldLabel) => {
+  console.debug(`[${props.checklistId}] props.label changed: "${oldLabel}" → "${newLabel}"`)
+  scheduleSaveToFirestore('label-change')
 })
 
 // uid が変わったら購読を再設定
@@ -289,7 +301,7 @@ watch(
     Object.entries(newValue).forEach(([id, checked]) => {
       localStorage.setItem(`${lsPrefix()}-${id}`, String(checked))
     })
-    scheduleSaveToFirestore()
+    scheduleSaveToFirestore('checked-change')
   },
   { deep: true }
 )
