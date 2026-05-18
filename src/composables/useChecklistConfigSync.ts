@@ -39,6 +39,8 @@ export function useChecklistConfigSync(user: Ref<User | null>) {
   let configLoaded = false
   let remoteConfigIds: string[] | null = null
   let checklistDocsInfo: Array<{ id: string; label?: string }> = []
+  // 削除したリストの ID を追跡し、orphan として誤って復活させないようにする
+  const deletedIds = new Set<string>()
 
   const lsKey = () => `checklists-config-${user.value?.uid ?? 'guest'}`
 
@@ -131,9 +133,10 @@ export function useChecklistConfigSync(user: Ref<User | null>) {
         }))
 
         // config にないが checklists コレクションに存在するものを orphan として追加
+        // ただし明示的に削除したリストは復活させない
         const configIdSet = new Set(ids)
         const orphans = checklistDocsInfo
-          .filter(d => !configIdSet.has(d.id))
+          .filter(d => !configIdSet.has(d.id) && !deletedIds.has(d.id))
           .map(d => ({
             id: d.id,
             label: d.label ?? 'チェックリスト',
@@ -171,10 +174,11 @@ export function useChecklistConfigSync(user: Ref<User | null>) {
       })
 
       // remoteConfigIds にも localState にもない document だけ orphan として追加
+      // ただし明示的に削除したリストは復活させない
       const localIds = new Set(checklists.value.map(c => c.id))
       const remoteConfigIdSet = new Set(remoteConfigIds)
       const newOrphans = docs
-        .filter(d => !remoteConfigIdSet.has(d.id) && !localIds.has(d.id))
+        .filter(d => !remoteConfigIdSet.has(d.id) && !localIds.has(d.id) && !deletedIds.has(d.id))
         .map(d => ({
           id: d.id,
           label: d.label ?? 'チェックリスト',
@@ -214,5 +218,9 @@ export function useChecklistConfigSync(user: Ref<User | null>) {
     stopFirestoreSync()
   })
 
-  return { checklists, activeView }
+  const markDeleted = (id: string) => {
+    deletedIds.add(id)
+  }
+
+  return { checklists, activeView, markDeleted }
 }

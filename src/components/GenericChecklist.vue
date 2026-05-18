@@ -65,6 +65,7 @@ let firestoreUnsubscribe: Unsubscribe | null = null
 let isSavingToFirestore = false
 let lastFirestoreJson = ''
 let hasSyncedFromFirestore = false
+let isBeingDeleted = false
 
 // ---- LocalStorage ヘルパー ----
 const lsPrefix = () => `${props.uid || 'guest'}-${props.checklistId}`
@@ -227,7 +228,7 @@ const startFirestoreSync = () => {
       if (!(data as ChecklistData & { label?: string }).label && props.label && props.uid) {
         saveChecklistLabel(props.uid, props.checklistId, props.label).catch(console.error)
       }
-    } else {
+    } else if (!isBeingDeleted) {
       // Firestoreにデータがなければローカルのデータをアップロードし、ラベルも書き込む
       scheduleSaveToFirestore()
       if (props.uid && props.label) {
@@ -238,6 +239,7 @@ const startFirestoreSync = () => {
 }
 
 const stopFirestoreSync = () => {
+  isBeingDeleted = true
   if (firestoreUnsubscribe) {
     firestoreUnsubscribe()
     firestoreUnsubscribe = null

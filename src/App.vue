@@ -9,7 +9,7 @@ import { useChecklistConfigSync } from './composables/useChecklistConfigSync'
 import { deleteChecklistData, saveChecklistLabel, type ChecklistConfig } from './firebase/firestore'
 
 const { user, authLoading, signOut } = useAuth()
-const { checklists, activeView } = useChecklistConfigSync(user)
+const { checklists, activeView, markDeleted } = useChecklistConfigSync(user)
 
 const navBarEl = ref<InstanceType<typeof NavigationBar> | null>(null)
 let navBarObserver: ResizeObserver | null = null
@@ -112,6 +112,9 @@ const handleDeleteChecklist = (id: string) => {
   const checklist = checklists.value.find(c => c.id === id)
   if (!checklist) return
   if (!confirm(`「${checklist.label}」を削除しますか？\n\n注意: チェックリスト内のすべてのデータが削除されます。`)) return
+
+  // 削除IDを記録してorphan検出による復活を防ぐ
+  markDeleted(id)
 
   // Firestore 購読を先に停止しないと、deleteChecklistData 後に
   // subscribeChecklistData が data=null を受け取りドキュメントを再作成してしまう
