@@ -3,6 +3,7 @@ import { ref, computed, watch, onMounted, onUnmounted, nextTick } from 'vue'
 import {
   subscribeChecklistData,
   saveChecklistData,
+  saveChecklistLabel,
   type ChecklistItem,
   type ChecklistData
 } from '../firebase/firestore'
@@ -219,6 +220,10 @@ const startFirestoreSync = () => {
       if (json === lastFirestoreJson) return
       lastFirestoreJson = json
       applyFirestoreData(data)
+      // label フィールドがない旧フォーマットのドキュメントにラベルを書き込む（移行処理）
+      if (!data.label && props.label && props.uid) {
+        saveChecklistLabel(props.uid, props.checklistId, props.label).catch(console.error)
+      }
     } else {
       // Firestoreにデータがなければローカルのデータをアップロード
       scheduleSaveToFirestore()
