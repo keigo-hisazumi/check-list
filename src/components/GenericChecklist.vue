@@ -123,6 +123,16 @@ const loadCheckedStateFromLS = () => {
 
 // ---- Firestore ヘルパー ----
 
+// キー順に依存しない安定した比較用シリアライズ
+// Firestore が返すオブジェクトのキー順は保存時と異なる場合があるため、常に固定順で比較する
+const serializeForCompare = (data: ChecklistData): string =>
+  JSON.stringify({
+    label: data.label,
+    customItems: data.customItems,
+    order: data.order,
+    checkedItems: data.checkedItems,
+  })
+
 // 現在の状態を ChecklistData にまとめる
 const buildChecklistData = (): ChecklistData => {
   return {
@@ -143,7 +153,7 @@ const scheduleSaveToFirestore = () => {
   saveTimer = setTimeout(async () => {
     if (!props.uid) return
     const data = buildChecklistData()
-    const json = JSON.stringify(data)
+    const json = serializeForCompare(data)
     if (json === lastFirestoreJson) return
     isSavingToFirestore = true
     try {
@@ -203,7 +213,7 @@ const startFirestoreSync = () => {
     if (isSavingToFirestore) return
     hasSyncedFromFirestore = true
     if (data) {
-      const json = JSON.stringify(data)
+      const json = serializeForCompare(data as ChecklistData)
       if (json === lastFirestoreJson) return
       lastFirestoreJson = json
       applyFirestoreData(data)
