@@ -198,6 +198,9 @@ export function useChecklistConfigSync(user: Ref<User | null>) {
       if (changed || newOrphans.length > 0) {
         checklists.value = [...updated, ...newOrphans]
       }
+
+      // document が新たに現れた際（GenericChecklist が初回保存した直後など）にラベルを同期する
+      saveLabelsToDocs(uid)
     })
   }
 
