@@ -6,7 +6,7 @@ import LoginView from './components/LoginView.vue'
 import { useAuth } from './composables/useAuth'
 import { useSwipe, TRANSITION_DURATION } from './composables/useSwipe'
 import { useChecklistConfigSync } from './composables/useChecklistConfigSync'
-import { deleteChecklistData, type ChecklistConfig } from './firebase/firestore'
+import { deleteChecklistData, saveChecklistLabel, type ChecklistConfig } from './firebase/firestore'
 
 const { user, authLoading, signOut } = useAuth()
 const { checklists, activeView } = useChecklistConfigSync(user)
@@ -122,7 +122,10 @@ const handleDeleteChecklist = (id: string) => {
 
 const handleUpdateChecklistName = (id: string, newName: string) => {
   const checklist = checklists.value.find(c => c.id === id)
-  if (checklist) checklist.label = newName
+  if (checklist) {
+    checklist.label = newName
+    if (user.value) saveChecklistLabel(user.value.uid, id, newName).catch(console.error)
+  }
 }
 </script>
 
@@ -173,6 +176,7 @@ const handleUpdateChecklistName = (id: string, newName: string) => {
           <GenericChecklist
             :ref="el => { checklistRefs[checklist.id] = el as InstanceType<typeof GenericChecklist> | null }"
             :checklist-id="checklist.id"
+            :label="checklist.label"
             :initial-items="checklist.initialItems"
             :is-active="activeView === checklist.id"
             :uid="user.uid"

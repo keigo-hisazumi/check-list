@@ -3,6 +3,7 @@ import { ref, computed, watch, onMounted, onUnmounted, nextTick } from 'vue'
 import {
   subscribeChecklistData,
   saveChecklistData,
+  saveChecklistLabel,
   type ChecklistItem,
   type ChecklistData
 } from '../firebase/firestore'
@@ -11,6 +12,7 @@ import type { Unsubscribe } from 'firebase/firestore'
 // Props定義
 interface Props {
   checklistId: string
+  label: string
   initialItems: ChecklistItem[]
   isActive?: boolean
   uid?: string
@@ -122,9 +124,22 @@ const loadCheckedStateFromLS = () => {
 
 // ---- Firestore ヘルパー ----
 
+// label は subscribeChecklistIds 側で同期するため比較対象から除外する。
+// label フィールドの有無が Firestore のエコー毎に変わることがあり、含めると無限ループになる。
+// customItems の要素内キー順も Firestore と保存時で異なる場合があるため正規化する。
+const serializeForCompare = (data: ChecklistData): string => {
+  const normalizedItems = (data.customItems ?? []).map(i => ({ id: i.id, label: i.label }))
+  return JSON.stringify({
+    customItems: normalizedItems,
+    order: data.order ?? [],
+    checkedItems: data.checkedItems ?? {},
+  })
+}
+
 // 現在の状態を ChecklistData にまとめる
 const buildChecklistData = (): ChecklistData => {
   return {
+    label: props.label,
     customItems: [...checklistItems.value],
     order: checklistItems.value.map(i => i.id),
     checkedItems: { ...checkedItems.value },
@@ -141,7 +156,7 @@ const scheduleSaveToFirestore = () => {
   saveTimer = setTimeout(async () => {
     if (!props.uid) return
     const data = buildChecklistData()
-    const json = JSON.stringify(data)
+    const json = serializeForCompare(data)
     if (json === lastFirestoreJson) return
     isSavingToFirestore = true
     try {
@@ -201,10 +216,14 @@ const startFirestoreSync = () => {
     if (isSavingToFirestore) return
     hasSyncedFromFirestore = true
     if (data) {
-      const json = JSON.stringify(data)
+      const json = serializeForCompare(data as ChecklistData)
       if (json === lastFirestoreJson) return
       lastFirestoreJson = json
       applyFirestoreData(data)
+      // label フィールドがない旧フォーマットのドキュメントにラベルを書き込む（移行処理）
+      if (!data.label && props.label && props.uid) {
+        saveChecklistLabel(props.uid, props.checklistId, props.label).catch(console.error)
+      }
     } else {
       // Firestoreにデータがなければローカルのデータをアップロード
       scheduleSaveToFirestore()
