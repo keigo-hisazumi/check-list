@@ -158,10 +158,7 @@ const scheduleSaveToFirestore = (reason?: string) => {
       console.debug(`[${props.checklistId}] scheduleSave(${reason}): skip (no change)`)
       return
     }
-    console.warn(`[${props.checklistId}] scheduleSave(${reason}): SAVING. diff:`, {
-      prev: JSON.parse(lastFirestoreJson || 'null'),
-      next: JSON.parse(json)
-    })
+    console.warn(`[${props.checklistId}] scheduleSave(${reason}): SAVING\nprev: ${lastFirestoreJson}\nnext: ${json}`)
     isSavingToFirestore = true
     try {
       await saveChecklistData(props.uid, props.checklistId, data)
@@ -222,10 +219,7 @@ const startFirestoreSync = () => {
     if (data) {
       const json = serializeForCompare(data as ChecklistData)
       if (json === lastFirestoreJson) { console.debug(`[${props.checklistId}] subscribeChecklistData: skip (no change)`); return }
-      console.warn(`[${props.checklistId}] subscribeChecklistData: applying. diff:`, {
-        prev: JSON.parse(lastFirestoreJson || 'null'),
-        next: JSON.parse(json)
-      })
+      console.warn(`[${props.checklistId}] subscribeChecklistData: applying\nprev: ${lastFirestoreJson}\nnext: ${json}`)
       lastFirestoreJson = json
       applyFirestoreData(data)
     } else {
