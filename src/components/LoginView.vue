@@ -1,3 +1,56 @@
+<template>
+  <div class="login-page">
+    <div class="login-card">
+      <h1 class="app-title">✅ チェックリスト</h1>
+      <h2 class="form-title">{{ mode === 'login' ? 'ログイン' : '新規登録' }}</h2>
+
+      <form @submit.prevent="handleSubmit" class="login-form">
+        <div class="form-group">
+          <label for="email">メールアドレス</label>
+          <input
+            id="email"
+            v-model="email"
+            type="email"
+            placeholder="example@email.com"
+            required
+            autocomplete="email"
+            :disabled="isLoading"
+          />
+        </div>
+
+        <div class="form-group">
+          <label for="password">パスワード</label>
+          <input
+            id="password"
+            v-model="password"
+            type="password"
+            :placeholder="mode === 'signup' ? '6文字以上' : 'パスワード'"
+            required
+            minlength="6"
+            :autocomplete="mode === 'login' ? 'current-password' : 'new-password'"
+            :disabled="isLoading"
+          />
+        </div>
+
+        <p v-if="errorMessage" class="error-message">{{ errorMessage }}</p>
+
+        <button type="submit" class="btn-submit" :disabled="isLoading">
+          <span v-if="isLoading" class="loading-spinner"></span>
+          <span v-else>{{ mode === 'login' ? 'ログイン' : '登録する' }}</span>
+        </button>
+      </form>
+
+      <button @click="toggleMode" class="btn-toggle" :disabled="isLoading">
+        {{
+          mode === 'login'
+            ? 'アカウントをお持ちでない方はこちら'
+            : 'すでにアカウントをお持ちの方はこちら'
+        }}
+      </button>
+    </div>
+  </div>
+</template>
+
 <script setup lang="ts">
 import { ref } from 'vue'
 import { useAuth } from '../composables/useAuth'
@@ -10,14 +63,10 @@ const password = ref('')
 const errorMessage = ref('')
 const isLoading = ref(false)
 
-const handleSubmit = async () => {
+async function handleSubmit() {
   errorMessage.value = ''
-  if (!email.value || !password.value) {
-    errorMessage.value = 'メールアドレスとパスワードを入力してください'
-    return
-  }
-
   isLoading.value = true
+
   try {
     if (mode.value === 'login') {
       await signIn(email.value, password.value)
@@ -52,151 +101,95 @@ const handleSubmit = async () => {
   }
 }
 
-const toggleMode = () => {
+function toggleMode() {
   mode.value = mode.value === 'login' ? 'signup' : 'login'
   errorMessage.value = ''
 }
 </script>
 
-<template>
-  <div class="login-container">
-    <div class="login-card">
-      <div class="login-icon">✅</div>
-      <h1 class="login-title">チェックリスト</h1>
-      <p class="login-subtitle">
-        {{ mode === 'login' ? 'ログインしてデータを同期' : '新規アカウントを作成' }}
-      </p>
-
-      <form class="login-form" @submit.prevent="handleSubmit">
-        <div class="field">
-          <label class="field-label" for="email">メールアドレス</label>
-          <input
-            id="email"
-            v-model="email"
-            type="email"
-            class="field-input"
-            placeholder="example@example.com"
-            autocomplete="email"
-            :disabled="isLoading"
-          />
-        </div>
-
-        <div class="field">
-          <label class="field-label" for="password">パスワード</label>
-          <input
-            id="password"
-            v-model="password"
-            type="password"
-            class="field-input"
-            :placeholder="mode === 'signup' ? '6文字以上' : 'パスワード'"
-            :autocomplete="mode === 'login' ? 'current-password' : 'new-password'"
-            :disabled="isLoading"
-          />
-        </div>
-
-        <p v-if="errorMessage" class="error-message">{{ errorMessage }}</p>
-
-        <button type="submit" class="submit-button" :disabled="isLoading">
-          <span v-if="isLoading" class="spinner"></span>
-          <span v-else>{{ mode === 'login' ? 'ログイン' : 'アカウントを作成' }}</span>
-        </button>
-      </form>
-
-      <button class="toggle-button" @click="toggleMode" :disabled="isLoading">
-        {{
-          mode === 'login'
-            ? 'アカウントをお持ちでない方はこちら'
-            : 'すでにアカウントをお持ちの方はこちら'
-        }}
-      </button>
-    </div>
-  </div>
-</template>
-
 <style scoped>
-.login-container {
-  height: 100dvh;
+.login-page {
   display: flex;
   align-items: center;
   justify-content: center;
+  min-height: 100dvh;
   background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
-  padding: 20px;
+  padding: 1rem;
 }
 
 .login-card {
   background: white;
   border-radius: 20px;
-  padding: 48px 40px;
-  max-width: 400px;
+  padding: 2.5rem;
   width: 100%;
-  text-align: center;
+  max-width: 400px;
   box-shadow: 0 20px 60px rgba(0, 0, 0, 0.3);
 }
 
-.login-icon {
-  font-size: 3em;
-  margin-bottom: 16px;
-}
-
-.login-title {
-  font-size: 1.8em;
-  color: #333;
-  margin: 0 0 8px;
+.app-title {
+  text-align: center;
+  font-size: 1.75rem;
   font-weight: 700;
+  color: #667eea;
+  margin-bottom: 0.25rem;
 }
 
-.login-subtitle {
-  color: #888;
-  font-size: 0.95em;
-  margin: 0 0 28px;
+.form-title {
+  text-align: center;
+  font-size: 1.1rem;
+  font-weight: 500;
+  color: #555;
+  margin-bottom: 2rem;
 }
 
 .login-form {
   display: flex;
   flex-direction: column;
-  gap: 16px;
-  text-align: left;
+  gap: 1.25rem;
 }
 
-.field {
+.form-group {
   display: flex;
   flex-direction: column;
-  gap: 6px;
+  gap: 0.5rem;
 }
 
-.field-label {
-  font-size: 0.85em;
+.form-group label {
+  font-size: 0.875rem;
   font-weight: 600;
-  color: #555;
+  color: #444;
 }
 
-.field-input {
-  padding: 12px 14px;
+.form-group input {
+  padding: 0.75rem 1rem;
   border: 2px solid #e0e0e0;
   border-radius: 10px;
-  font-size: 1em;
+  font-size: 1rem;
   outline: none;
-  transition: border-color 0.2s ease;
+  transition: border-color 0.2s;
   background: white;
 }
 
-.field-input:focus {
+.form-group input:focus {
   border-color: #667eea;
 }
 
-.field-input:disabled {
+.form-group input:disabled {
   background: #f5f5f5;
   color: #aaa;
 }
 
 .error-message {
-  font-size: 0.88em;
-  color: #dc3545;
-  margin: 0;
+  font-size: 0.875rem;
+  color: #e53935;
   text-align: center;
+  padding: 0.5rem;
+  background: #ffebee;
+  border-radius: 6px;
+  margin: 0;
 }
 
-.submit-button {
+.btn-submit {
   display: flex;
   align-items: center;
   justify-content: center;
@@ -205,63 +198,68 @@ const toggleMode = () => {
   color: white;
   border: none;
   border-radius: 12px;
-  font-size: 1em;
+  font-size: 1rem;
   font-weight: 600;
   cursor: pointer;
-  transition: opacity 0.2s ease, transform 0.1s ease;
+  transition: opacity 0.2s, transform 0.1s;
   -webkit-tap-highlight-color: transparent;
-  margin-top: 4px;
+  margin-top: 0.25rem;
 }
 
-.submit-button:hover:not(:disabled) {
+.btn-submit:hover:not(:disabled) {
   opacity: 0.9;
 }
 
-.submit-button:active:not(:disabled) {
+.btn-submit:active:not(:disabled) {
   transform: scale(0.98);
 }
 
-.submit-button:disabled {
+.btn-submit:disabled {
   opacity: 0.6;
   cursor: not-allowed;
 }
 
-.spinner {
+.loading-spinner {
   width: 20px;
   height: 20px;
   border: 2px solid rgba(255, 255, 255, 0.4);
   border-top-color: white;
   border-radius: 50%;
   animation: spin 0.7s linear infinite;
+  display: inline-block;
 }
 
 @keyframes spin {
   to { transform: rotate(360deg); }
 }
 
-.toggle-button {
+.btn-toggle {
   display: block;
   width: 100%;
-  margin-top: 20px;
-  background: none;
+  margin-top: 1.25rem;
+  padding: 0.5rem;
+  background: transparent;
   border: none;
   color: #667eea;
-  font-size: 0.88em;
+  font-size: 0.875rem;
   cursor: pointer;
   text-align: center;
   text-decoration: underline;
-  padding: 4px;
   -webkit-tap-highlight-color: transparent;
 }
 
-.toggle-button:disabled {
+.btn-toggle:hover:not(:disabled) {
+  color: #764ba2;
+}
+
+.btn-toggle:disabled {
   opacity: 0.5;
   cursor: not-allowed;
 }
 
 @media (max-width: 480px) {
   .login-card {
-    padding: 36px 24px;
+    padding: 2rem 1.5rem;
   }
 }
 </style>
