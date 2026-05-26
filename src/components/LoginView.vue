@@ -1,7 +1,7 @@
 <template>
   <div class="login-page">
     <div class="login-card">
-      <h1 class="app-title">✅ チェックリスト</h1>
+      <h1 class="app-title">チェックリスト</h1>
       <h2 class="form-title">{{ mode === 'login' ? 'ログイン' : '新規登録' }}</h2>
 
       <form @submit.prevent="handleSubmit" class="login-form">
@@ -113,7 +113,7 @@ function toggleMode() {
   align-items: center;
   justify-content: center;
   min-height: 100dvh;
-  background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+  background: #f5f5f5;
   padding: 1rem;
 }
 
@@ -123,7 +123,7 @@ function toggleMode() {
   padding: 2.5rem;
   width: 100%;
   max-width: 400px;
-  box-shadow: 0 20px 60px rgba(0, 0, 0, 0.3);
+  box-shadow: 0 4px 24px rgba(0, 0, 0, 0.1);
 }
 
 .app-title {
@@ -194,7 +194,7 @@ function toggleMode() {
   align-items: center;
   justify-content: center;
   height: 50px;
-  background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+  background: #667eea;
   color: white;
   border: none;
   border-radius: 12px;
