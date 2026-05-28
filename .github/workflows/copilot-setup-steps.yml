@@ -1,4 +1,4 @@
-name: "Copilot Setup Steps"
+name: Copilot Setup Steps
 
 on:
   workflow_dispatch:
@@ -14,8 +14,9 @@ jobs:
     runs-on: ubuntu-latest
     permissions:
       contents: read
+
     steps:
-      - name: チェックアウト
+      - name: Checkout
         uses: actions/checkout@v4
 
       - name: フォントのインストール
@@ -43,13 +44,13 @@ jobs:
           sudo mv *.ttf /usr/share/fonts/truetype/segoe-ui/
           fc-cache -fv
 
-      - name: Node.jsのセットアップ
+      - name: Setup Node.js
         uses: actions/setup-node@v4
         with:
           node-version: '22'
           cache: 'npm'
 
-      - name: 依存関係のインストール
+      - name: Install dependencies
         run: npm ci
 
       - name: 型チェック
@@ -57,3 +58,13 @@ jobs:
 
       - name: ビルド
         run: npm run build-only
+
+      - name: 開発サーバーの起動
+        run: npm run dev &
+
+      - name: サーバーの起動待機
+        run: |
+          timeout 60 bash -c \
+            'until curl -sf http://localhost:5173 > /dev/null; \
+            do sleep 2; done' || exit 1
+          echo "Development server is ready"
