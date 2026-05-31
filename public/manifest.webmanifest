@@ -10,12 +10,6 @@
   "orientation": "portrait",
   "icons": [
     {
-      "src": "/check-list/icon.svg",
-      "sizes": "any",
-      "type": "image/svg+xml",
-      "purpose": "any"
-    },
-    {
       "src": "/check-list/icon-192x192.png",
       "sizes": "192x192",
       "type": "image/png",
@@ -28,10 +22,10 @@
       "purpose": "any"
     },
     {
-      "src": "/check-list/icon-maskable-512x512.png",
-      "sizes": "512x512",
-      "type": "image/png",
-      "purpose": "maskable"
+      "src": "/check-list/icon.svg",
+      "sizes": "any",
+      "type": "image/svg+xml",
+      "purpose": "any"
     }
   ]
 }
