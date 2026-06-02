@@ -224,10 +224,13 @@ const startFirestoreSync = () => {
   stopFirestoreSync()
   firestoreUnsubscribe = subscribeChecklistData(props.uid, props.checklistId, (data) => {
     if (isSavingToFirestore) return
+    // 常に hasSyncedFromFirestore をセット（保存ガードを解除するため）
     hasSyncedFromFirestore = true
     if (data) {
       const json = serializeForCompare(data)
       if (json === lastFirestoreJson) return
+      // 未保存のローカル変更がある場合は Firestore の古いデータで上書きしない
+      if (saveTimer !== null) return
       lastFirestoreJson = json
       applyFirestoreData(data)
       // label フィールドがない旧フォーマットのドキュメントにラベルを書き込む（移行処理）
