@@ -16,7 +16,8 @@
       "expo-splash-screen"
     ],
     "experiments": {
-      "typedRoutes": true
+      "typedRoutes": true,
+      "baseUrl": "/check-list"
     }
   }
 }

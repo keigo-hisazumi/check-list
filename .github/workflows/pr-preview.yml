@@ -30,9 +30,17 @@ jobs:
       - name: Install dependencies
         run: npm ci
 
-      - name: Build with PR-specific base path
-        env:
-          VITE_BASE_PATH: /check-list/pr-${{ github.event.number }}/
+      - name: Set base URL for PR preview
+        run: |
+          node -e "
+            const fs = require('fs');
+            const config = JSON.parse(fs.readFileSync('app.json', 'utf8'));
+            config.expo.experiments = config.expo.experiments || {};
+            config.expo.experiments.baseUrl = '/check-list/pr-${{ github.event.number }}';
+            fs.writeFileSync('app.json', JSON.stringify(config, null, 2));
+          "
+
+      - name: Build
         run: npm run build
 
       - name: Deploy PR preview to gh-pages
