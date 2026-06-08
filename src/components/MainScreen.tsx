@@ -24,6 +24,7 @@ export function MainScreen({ user, onSignOut }: Props) {
   const [isEditMode, setIsEditMode] = useState(false)
   const [stats, setStats] = useState({ completedCount: 0, totalCount: 0 })
   const [containerWidth, setContainerWidth] = useState(0)
+  const [containerHeight, setContainerHeight] = useState(0)
   const [showDeleteListConfirm, setShowDeleteListConfirm] = useState(false)
 
   const scrollRef = useRef<ScrollView>(null)
@@ -192,11 +193,14 @@ export function MainScreen({ user, onSignOut }: Props) {
         onScroll={handleScroll}
         onMomentumScrollEnd={handleScrollEnd}
         onScrollEndDrag={handleScrollEnd}
-        onLayout={(e) => setContainerWidth(e.nativeEvent.layout.width)}
+        onLayout={(e) => {
+          setContainerWidth(e.nativeEvent.layout.width)
+          setContainerHeight(e.nativeEvent.layout.height)
+        }}
         style={styles.pager}
       >
         {checklists.map((item) => (
-          <View key={item.id} style={{ width: containerWidth }}>
+          <View key={item.id} style={{ width: containerWidth, height: containerHeight }}>
             <Checklist
               ref={(el) => { checklistRefs.current[item.id] = el }}
               checklist={item}
