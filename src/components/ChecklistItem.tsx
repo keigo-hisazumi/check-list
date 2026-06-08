@@ -195,6 +195,6 @@ const styles = StyleSheet.create({
     marginLeft: 8,
   },
   iconBtn: {
-    padding: 6,
+    padding: 4,
   },
 })
