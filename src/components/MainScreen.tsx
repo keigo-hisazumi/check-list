@@ -27,9 +27,12 @@ export function MainScreen({ user, onSignOut }: Props) {
 
   const scrollRef = useRef<ScrollView>(null)
   const checklistRefs = useRef<Record<string, ChecklistHandle | null>>({})
-  // Tracks whether the scroll was triggered programmatically (tab tap)
-  // to avoid the sync effect overriding an in-progress animated scroll.
+  // True while a programmatic scrollTo is in flight — suppresses user-swipe tab updates.
   const isProgrammaticScroll = useRef(false)
+  // Target X for the in-flight programmatic scroll; cleared when onScroll reaches it.
+  const targetScrollX = useRef<number | null>(null)
+  // Safety-net timer: clears the flag if no scroll events arrive (e.g. same-page tap on web).
+  const programmaticScrollTimer = useRef<ReturnType<typeof setTimeout> | null>(null)
 
   const activeIndex = checklists.findIndex((c) => c.id === activeChecklistId)
 
@@ -41,24 +44,58 @@ export function MainScreen({ user, onSignOut }: Props) {
     }
   }, [containerWidth, checklists.length])
 
+  const clearProgrammaticFlag = useCallback(() => {
+    isProgrammaticScroll.current = false
+    targetScrollX.current = null
+    if (programmaticScrollTimer.current) {
+      clearTimeout(programmaticScrollTimer.current)
+      programmaticScrollTimer.current = null
+    }
+  }, [])
+
   const handleNavChange = useCallback(
     (id: string) => {
       if (isEditMode) setIsEditMode(false)
       setActiveChecklistId(id)
       const index = checklists.findIndex((c) => c.id === id)
       if (index >= 0 && containerWidth > 0 && scrollRef.current) {
+        if (programmaticScrollTimer.current) clearTimeout(programmaticScrollTimer.current)
         isProgrammaticScroll.current = true
+        targetScrollX.current = index * containerWidth
         scrollRef.current.scrollTo({ x: index * containerWidth, animated: true })
+        // Safety net: on web, scroll end events may not fire for programmatic scrolls.
+        programmaticScrollTimer.current = setTimeout(clearProgrammaticFlag, 600)
       }
     },
-    [isEditMode, checklists, containerWidth, setActiveChecklistId],
+    [isEditMode, checklists, containerWidth, setActiveChecklistId, clearProgrammaticFlag],
   )
 
+  // Fired on every scroll tick. Handles two jobs:
+  // 1. Clears the programmatic flag once the animated scroll reaches its target.
+  // 2. Updates the active tab in real-time during user-initiated swipes.
+  const handleScroll = useCallback(
+    (e: { nativeEvent: { contentOffset: { x: number } } }) => {
+      const x = e.nativeEvent.contentOffset.x
+      if (isProgrammaticScroll.current) {
+        if (targetScrollX.current !== null && Math.abs(x - targetScrollX.current) < 2) {
+          clearProgrammaticFlag()
+        }
+        return
+      }
+      if (isEditMode || containerWidth === 0) return
+      const index = Math.round(x / containerWidth)
+      if (index >= 0 && index < checklists.length) {
+        setActiveChecklistId(checklists[index].id)
+      }
+    },
+    [checklists, isEditMode, containerWidth, setActiveChecklistId, clearProgrammaticFlag],
+  )
+
+  // Fallback for native: onMomentumScrollEnd / onScrollEndDrag fire reliably on iOS/Android.
   const handleScrollEnd = useCallback(
     (e: { nativeEvent: { contentOffset: { x: number } } }) => {
-      // Ignore events triggered by our own scrollTo calls
       if (isProgrammaticScroll.current) {
-        isProgrammaticScroll.current = false
+        clearProgrammaticFlag()
         return
       }
       if (isEditMode || containerWidth === 0) return
@@ -67,7 +104,7 @@ export function MainScreen({ user, onSignOut }: Props) {
         setActiveChecklistId(checklists[index].id)
       }
     },
-    [checklists, isEditMode, containerWidth, setActiveChecklistId],
+    [checklists, isEditMode, containerWidth, setActiveChecklistId, clearProgrammaticFlag],
   )
 
   const handleEdit = useCallback(() => {
@@ -162,6 +199,8 @@ export function MainScreen({ user, onSignOut }: Props) {
         pagingEnabled
         scrollEnabled={!isEditMode}
         showsHorizontalScrollIndicator={false}
+        scrollEventThrottle={16}
+        onScroll={handleScroll}
         onMomentumScrollEnd={handleScrollEnd}
         onScrollEndDrag={handleScrollEnd}
         onLayout={(e) => setContainerWidth(e.nativeEvent.layout.width)}
