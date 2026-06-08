@@ -3,8 +3,8 @@ import {
   View,
   StyleSheet,
   FlatList,
-  Dimensions,
   Alert,
+  useWindowDimensions,
 } from 'react-native'
 import type { User } from 'firebase/auth'
 import { useChecklistConfigSync } from '../hooks/useChecklistConfigSync'
@@ -18,9 +18,8 @@ interface Props {
   onSignOut: () => void
 }
 
-const { width: SCREEN_WIDTH } = Dimensions.get('window')
-
 export function MainScreen({ user, onSignOut }: Props) {
+  const { width: screenWidth } = useWindowDimensions()
   const { checklists, setChecklists, activeChecklistId, setActiveChecklistId } =
     useChecklistConfigSync(user)
 
@@ -52,7 +51,7 @@ export function MainScreen({ user, onSignOut }: Props) {
   const handleScrollEnd = useCallback(
     (e: { nativeEvent: { contentOffset: { x: number } } }) => {
       if (isEditMode) return
-      const index = Math.round(e.nativeEvent.contentOffset.x / SCREEN_WIDTH)
+      const index = Math.round(e.nativeEvent.contentOffset.x / screenWidth)
       if (index >= 0 && index < checklists.length) {
         setActiveChecklistId(checklists[index].id)
       }
@@ -133,7 +132,7 @@ export function MainScreen({ user, onSignOut }: Props) {
 
   const renderChecklist = useCallback(
     ({ item }: { item: ChecklistConfig }) => (
-      <View style={{ width: SCREEN_WIDTH }}>
+      <View style={{ width: screenWidth }}>
         <Checklist
           ref={(el) => { checklistRefs.current[item.id] = el }}
           checklist={item}
@@ -175,8 +174,8 @@ export function MainScreen({ user, onSignOut }: Props) {
         showsHorizontalScrollIndicator={false}
         onMomentumScrollEnd={handleScrollEnd}
         getItemLayout={(_, index) => ({
-          length: SCREEN_WIDTH,
-          offset: SCREEN_WIDTH * index,
+          length: screenWidth,
+          offset: screenWidth * index,
           index,
         })}
         style={styles.pager}
