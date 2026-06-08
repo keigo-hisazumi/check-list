@@ -1,4 +1,4 @@
-import { initializeApp } from 'firebase/app'
+import { initializeApp, getApps, getApp } from 'firebase/app'
 import { getAuth } from 'firebase/auth'
 import { getFirestore } from 'firebase/firestore'
 
@@ -8,9 +8,10 @@ const firebaseConfig = {
   projectId: 'check-list-f5aee',
   storageBucket: 'check-list-f5aee.firebasestorage.app',
   messagingSenderId: '766444919460',
-  appId: '1:766444919460:web:a36a1765bddbfd107ce431'
+  appId: '1:766444919460:web:a36a1765bddbfd107ce431',
 }
 
-const app = initializeApp(firebaseConfig)
+const app = getApps().length === 0 ? initializeApp(firebaseConfig) : getApp()
+
 export const auth = getAuth(app)
 export const db = getFirestore(app)

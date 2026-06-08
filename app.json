@@ -1,0 +1,23 @@
+{
+  "expo": {
+    "name": "チェックリスト",
+    "slug": "check-list",
+    "version": "1.0.0",
+    "orientation": "portrait",
+    "scheme": "checklist",
+    "platforms": ["ios", "android", "web"],
+    "web": {
+      "bundler": "metro",
+      "output": "static",
+      "favicon": "./public/favicon.ico"
+    },
+    "plugins": [
+      "expo-router",
+      "expo-splash-screen"
+    ],
+    "experiments": {
+      "typedRoutes": true,
+      "baseUrl": "/check-list"
+    }
+  }
+}
