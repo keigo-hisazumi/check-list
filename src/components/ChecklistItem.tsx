@@ -155,10 +155,10 @@ const styles = StyleSheet.create({
   },
   dragHandle: {
     paddingRight: 8,
-    paddingVertical: 4,
   },
   dragIcon: {
     fontSize: 20,
+    lineHeight: 20,
     color: '#aaa',
   },
   label: {
