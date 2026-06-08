@@ -5,6 +5,7 @@ import {
   TouchableOpacity,
   StyleSheet,
 } from 'react-native'
+import Svg, { Path, Rect } from 'react-native-svg'
 import { PromptModal } from './PromptModal'
 
 interface Props {
@@ -17,6 +18,40 @@ interface Props {
   onCheck: () => void
   onDelete: () => void
   onUpdateLabel: (label: string) => void
+}
+
+function PencilIcon({ size = 20, color = '#667eea' }: { size?: number; color?: string }) {
+  return (
+    <Svg width={size} height={size} viewBox="0 0 24 24" fill="none">
+      <Path
+        d="M16.862 4.487l1.687-1.688a1.875 1.875 0 112.652 2.652L10.582 16.07a4.5 4.5 0 01-1.897 1.13L6 18l.8-2.685a4.5 4.5 0 011.13-1.897l8.932-8.931zm0 0L19.5 7.125"
+        stroke={color}
+        strokeWidth={1.8}
+        strokeLinecap="round"
+        strokeLinejoin="round"
+      />
+    </Svg>
+  )
+}
+
+function TrashIcon({ size = 20, color = '#dc3545' }: { size?: number; color?: string }) {
+  return (
+    <Svg width={size} height={size} viewBox="0 0 24 24" fill="none">
+      <Path
+        d="M3 6h18M8 6V4a1 1 0 011-1h6a1 1 0 011 1v2M19 6l-1 14a2 2 0 01-2 2H8a2 2 0 01-2-2L5 6"
+        stroke={color}
+        strokeWidth={1.8}
+        strokeLinecap="round"
+        strokeLinejoin="round"
+      />
+      <Path
+        d="M10 11v6M14 11v6"
+        stroke={color}
+        strokeWidth={1.8}
+        strokeLinecap="round"
+      />
+    </Svg>
+  )
 }
 
 export function ChecklistItem({
@@ -63,11 +98,11 @@ export function ChecklistItem({
         </Text>
 
         <View style={styles.editActions}>
-          <TouchableOpacity style={styles.editBtn} onPress={() => setEditModalVisible(true)}>
-            <Text style={styles.editIcon}>✏️</Text>
+          <TouchableOpacity style={styles.iconBtn} onPress={() => setEditModalVisible(true)}>
+            <PencilIcon size={20} color="#667eea" />
           </TouchableOpacity>
-          <TouchableOpacity style={styles.deleteBtn} onPress={onDelete}>
-            <Text style={styles.deleteIcon}>🗑️</Text>
+          <TouchableOpacity style={styles.iconBtn} onPress={onDelete}>
+            <TrashIcon size={20} color="#dc3545" />
           </TouchableOpacity>
         </View>
 
@@ -159,16 +194,7 @@ const styles = StyleSheet.create({
     gap: 4,
     marginLeft: 8,
   },
-  editBtn: {
+  iconBtn: {
     padding: 6,
-  },
-  editIcon: {
-    fontSize: 18,
-  },
-  deleteBtn: {
-    padding: 6,
-  },
-  deleteIcon: {
-    fontSize: 18,
   },
 })
