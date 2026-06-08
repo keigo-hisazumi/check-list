@@ -2,9 +2,8 @@ import React, { useRef, useState, useCallback, useEffect } from 'react'
 import {
   View,
   StyleSheet,
-  FlatList,
+  ScrollView,
   Alert,
-  useWindowDimensions,
 } from 'react-native'
 import type { User } from 'firebase/auth'
 import { useChecklistConfigSync } from '../hooks/useChecklistConfigSync'
@@ -19,44 +18,47 @@ interface Props {
 }
 
 export function MainScreen({ user, onSignOut }: Props) {
-  const { width: screenWidth } = useWindowDimensions()
   const { checklists, setChecklists, activeChecklistId, setActiveChecklistId } =
     useChecklistConfigSync(user)
 
   const [isEditMode, setIsEditMode] = useState(false)
   const [stats, setStats] = useState({ completedCount: 0, totalCount: 0 })
+  const [containerWidth, setContainerWidth] = useState(0)
 
-  const flatListRef = useRef<FlatList>(null)
+  const scrollRef = useRef<ScrollView>(null)
   const checklistRefs = useRef<Record<string, ChecklistHandle | null>>({})
 
   const activeIndex = checklists.findIndex((c) => c.id === activeChecklistId)
 
-  // Scroll to active checklist when id changes
+  // Scroll to active page when id or container width changes
   useEffect(() => {
-    if (activeIndex >= 0 && flatListRef.current) {
-      flatListRef.current.scrollToIndex({ index: activeIndex, animated: true })
+    if (activeIndex >= 0 && containerWidth > 0 && scrollRef.current) {
+      scrollRef.current.scrollTo({ x: activeIndex * containerWidth, animated: false })
     }
-  }, [activeChecklistId, checklists.length])
+  }, [activeChecklistId, containerWidth, checklists.length])
 
+  // Smooth scroll when only activeIndex changes (tab tap)
   const handleNavChange = useCallback(
     (id: string) => {
-      if (isEditMode) {
-        setIsEditMode(false)
+      if (isEditMode) setIsEditMode(false)
+      const index = checklists.findIndex((c) => c.id === id)
+      if (index >= 0 && containerWidth > 0 && scrollRef.current) {
+        scrollRef.current.scrollTo({ x: index * containerWidth, animated: true })
       }
       setActiveChecklistId(id)
     },
-    [isEditMode, setActiveChecklistId],
+    [isEditMode, checklists, containerWidth, setActiveChecklistId],
   )
 
   const handleScrollEnd = useCallback(
     (e: { nativeEvent: { contentOffset: { x: number } } }) => {
-      if (isEditMode) return
-      const index = Math.round(e.nativeEvent.contentOffset.x / screenWidth)
+      if (isEditMode || containerWidth === 0) return
+      const index = Math.round(e.nativeEvent.contentOffset.x / containerWidth)
       if (index >= 0 && index < checklists.length) {
         setActiveChecklistId(checklists[index].id)
       }
     },
-    [checklists, isEditMode, setActiveChecklistId],
+    [checklists, isEditMode, containerWidth, setActiveChecklistId],
   )
 
   const handleEdit = useCallback(() => {
@@ -69,7 +71,6 @@ export function MainScreen({ user, onSignOut }: Props) {
 
   const handleResetOrDelete = useCallback(() => {
     if (isEditMode) {
-      // Delete current checklist
       if (checklists.length <= 1) {
         Alert.alert('削除できません', '最後のチェックリストは削除できません')
         return
@@ -90,7 +91,6 @@ export function MainScreen({ user, onSignOut }: Props) {
               const newChecklists = checklists.filter((c) => c.id !== activeChecklistId)
               setChecklists(newChecklists)
 
-              // Clean up local storage
               const prefix = `${user.uid}-${activeChecklistId}`
               const keys = await AsyncStorage.getAllKeys()
               const toDelete = keys.filter((k) => k.startsWith(prefix))
@@ -130,22 +130,6 @@ export function MainScreen({ user, onSignOut }: Props) {
     [user.uid, setChecklists],
   )
 
-  const renderChecklist = useCallback(
-    ({ item }: { item: ChecklistConfig }) => (
-      <View style={{ width: screenWidth }}>
-        <Checklist
-          ref={(el) => { checklistRefs.current[item.id] = el }}
-          checklist={item}
-          user={user}
-          isActive={item.id === activeChecklistId}
-          isEditMode={isEditMode && item.id === activeChecklistId}
-          onStatsChange={item.id === activeChecklistId ? setStats : () => {}}
-        />
-      </View>
-    ),
-    [user, activeChecklistId, isEditMode],
-  )
-
   if (checklists.length === 0) return null
 
   return (
@@ -163,23 +147,29 @@ export function MainScreen({ user, onSignOut }: Props) {
         onEdit={handleEdit}
         onResetOrDelete={handleResetOrDelete}
       />
-      <FlatList
-        ref={flatListRef}
-        data={checklists}
-        keyExtractor={(item) => item.id}
-        renderItem={renderChecklist}
+      <ScrollView
+        ref={scrollRef}
         horizontal
         pagingEnabled
         scrollEnabled={!isEditMode}
         showsHorizontalScrollIndicator={false}
         onMomentumScrollEnd={handleScrollEnd}
-        getItemLayout={(_, index) => ({
-          length: screenWidth,
-          offset: screenWidth * index,
-          index,
-        })}
+        onLayout={(e) => setContainerWidth(e.nativeEvent.layout.width)}
         style={styles.pager}
-      />
+      >
+        {checklists.map((item) => (
+          <View key={item.id} style={{ width: containerWidth }}>
+            <Checklist
+              ref={(el) => { checklistRefs.current[item.id] = el }}
+              checklist={item}
+              user={user}
+              isActive={item.id === activeChecklistId}
+              isEditMode={isEditMode && item.id === activeChecklistId}
+              onStatsChange={item.id === activeChecklistId ? setStats : () => {}}
+            />
+          </View>
+        ))}
+      </ScrollView>
     </View>
   )
 }
