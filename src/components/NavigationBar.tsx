@@ -68,7 +68,6 @@ export function NavigationBar({
             <Text style={styles.renameText} numberOfLines={1}>
               {activeChecklist?.label ?? ''}
             </Text>
-            <Text style={styles.renameHint}>タップして名前を変更</Text>
           </TouchableOpacity>
         ) : (
           <ScrollView
@@ -279,11 +278,6 @@ const styles = StyleSheet.create({
     fontSize: 15,
     fontWeight: '600',
     color: '#333',
-  },
-  renameHint: {
-    fontSize: 11,
-    color: '#667eea',
-    marginTop: 2,
   },
   actionBar: {
     flexDirection: 'row',
