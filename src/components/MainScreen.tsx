@@ -27,31 +27,40 @@ export function MainScreen({ user, onSignOut }: Props) {
 
   const scrollRef = useRef<ScrollView>(null)
   const checklistRefs = useRef<Record<string, ChecklistHandle | null>>({})
+  // Tracks whether the scroll was triggered programmatically (tab tap)
+  // to avoid the sync effect overriding an in-progress animated scroll.
+  const isProgrammaticScroll = useRef(false)
 
   const activeIndex = checklists.findIndex((c) => c.id === activeChecklistId)
 
-  // Scroll to active page when id or container width changes
+  // Correct scroll position when layout changes (resize / initial render).
+  // Does NOT run when only activeChecklistId changes — that's handled by handleNavChange.
   useEffect(() => {
     if (activeIndex >= 0 && containerWidth > 0 && scrollRef.current) {
       scrollRef.current.scrollTo({ x: activeIndex * containerWidth, animated: false })
     }
-  }, [activeChecklistId, containerWidth, checklists.length])
+  }, [containerWidth, checklists.length])
 
-  // Smooth scroll when only activeIndex changes (tab tap)
   const handleNavChange = useCallback(
     (id: string) => {
       if (isEditMode) setIsEditMode(false)
+      setActiveChecklistId(id)
       const index = checklists.findIndex((c) => c.id === id)
       if (index >= 0 && containerWidth > 0 && scrollRef.current) {
+        isProgrammaticScroll.current = true
         scrollRef.current.scrollTo({ x: index * containerWidth, animated: true })
       }
-      setActiveChecklistId(id)
     },
     [isEditMode, checklists, containerWidth, setActiveChecklistId],
   )
 
   const handleScrollEnd = useCallback(
     (e: { nativeEvent: { contentOffset: { x: number } } }) => {
+      // Ignore events triggered by our own scrollTo calls
+      if (isProgrammaticScroll.current) {
+        isProgrammaticScroll.current = false
+        return
+      }
       if (isEditMode || containerWidth === 0) return
       const index = Math.round(e.nativeEvent.contentOffset.x / containerWidth)
       if (index >= 0 && index < checklists.length) {
@@ -154,6 +163,7 @@ export function MainScreen({ user, onSignOut }: Props) {
         scrollEnabled={!isEditMode}
         showsHorizontalScrollIndicator={false}
         onMomentumScrollEnd={handleScrollEnd}
+        onScrollEndDrag={handleScrollEnd}
         onLayout={(e) => setContainerWidth(e.nativeEvent.layout.width)}
         style={styles.pager}
       >
