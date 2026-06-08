@@ -113,6 +113,7 @@ const styles = StyleSheet.create({
     flexGrow: 1,
     justifyContent: 'center',
     padding: 24,
+    alignItems: 'center',
   },
   card: {
     backgroundColor: 'white',
@@ -123,6 +124,8 @@ const styles = StyleSheet.create({
     shadowOpacity: 0.15,
     shadowRadius: 12,
     elevation: 8,
+    width: '100%',
+    maxWidth: 480,
   },
   title: {
     fontSize: 28,
