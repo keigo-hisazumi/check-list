@@ -73,8 +73,7 @@ export const Checklist = forwardRef<ChecklistHandle, Props>(
           keyExtractor={(item) => item.id}
           renderItem={renderItem}
           onDragEnd={({ data }) => updateItems(data)}
-          dragHitSlop={{ top: 0, bottom: 0, left: 0, right: 0 }}
-          activationDistance={isEditMode ? 0 : 1000}
+          activationDistance={isEditMode ? 1 : 1000}
           contentContainerStyle={styles.listContent}
           ListFooterComponent={
             isEditMode ? (

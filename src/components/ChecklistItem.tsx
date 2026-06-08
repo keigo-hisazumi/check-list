@@ -89,7 +89,7 @@ export function ChecklistItem({
   if (isEditMode) {
     return (
       <View style={itemStyle}>
-        <TouchableOpacity onLongPress={drag} delayLongPress={0} style={styles.dragHandle}>
+        <TouchableOpacity onPressIn={drag} style={styles.dragHandle}>
           <Text style={styles.dragIcon}>⠿</Text>
         </TouchableOpacity>
 
