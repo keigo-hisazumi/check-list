@@ -1,9 +1,8 @@
-import React, { useState, useRef } from 'react'
+import React, { useState } from 'react'
 import {
   View,
   Text,
   TouchableOpacity,
-  TextInput,
   StyleSheet,
 } from 'react-native'
 import { PromptModal } from './PromptModal'
@@ -33,33 +32,36 @@ export function ChecklistItem({
 }: Props) {
   const [editModalVisible, setEditModalVisible] = useState(false)
 
-  return (
-    <View style={[styles.item, checked && styles.itemChecked, isDragging && styles.itemDragging]}>
-      {/* Drag handle (edit mode only) */}
-      {isEditMode && (
+  const itemStyle = [
+    styles.item,
+    checked && styles.itemChecked,
+    isDragging && styles.itemDragging,
+  ]
+
+  const modal = (
+    <PromptModal
+      visible={editModalVisible}
+      title="項目名を編集"
+      defaultValue={label}
+      onConfirm={(text) => {
+        onUpdateLabel(text)
+        setEditModalVisible(false)
+      }}
+      onCancel={() => setEditModalVisible(false)}
+    />
+  )
+
+  if (isEditMode) {
+    return (
+      <View style={itemStyle}>
         <TouchableOpacity onLongPress={drag} delayLongPress={0} style={styles.dragHandle}>
           <Text style={styles.dragIcon}>⠿</Text>
         </TouchableOpacity>
-      )}
 
-      {/* Label */}
-      <Text style={[styles.label, checked && styles.labelChecked]} numberOfLines={2}>
-        {label}
-      </Text>
+        <Text style={[styles.label, checked && styles.labelChecked]} numberOfLines={2}>
+          {label}
+        </Text>
 
-      {/* Check button (normal mode) */}
-      {!isEditMode && (
-        <TouchableOpacity style={styles.checkBtn} onPress={onCheck}>
-          {checked ? (
-            <Text style={styles.checkMark}>✓</Text>
-          ) : (
-            <View style={styles.emptyCheck} />
-          )}
-        </TouchableOpacity>
-      )}
-
-      {/* Edit/Delete buttons (edit mode) */}
-      {isEditMode && (
         <View style={styles.editActions}>
           <TouchableOpacity style={styles.editBtn} onPress={() => setEditModalVisible(true)}>
             <Text style={styles.editIcon}>✏️</Text>
@@ -68,19 +70,28 @@ export function ChecklistItem({
             <Text style={styles.deleteIcon}>🗑️</Text>
           </TouchableOpacity>
         </View>
-      )}
 
-      <PromptModal
-        visible={editModalVisible}
-        title="項目名を編集"
-        defaultValue={label}
-        onConfirm={(text) => {
-          onUpdateLabel(text)
-          setEditModalVisible(false)
-        }}
-        onCancel={() => setEditModalVisible(false)}
-      />
-    </View>
+        {modal}
+      </View>
+    )
+  }
+
+  return (
+    <TouchableOpacity style={itemStyle} onPress={onCheck} activeOpacity={0.7}>
+      <Text style={[styles.label, checked && styles.labelChecked]} numberOfLines={2}>
+        {label}
+      </Text>
+
+      <View style={styles.checkBtn}>
+        {checked ? (
+          <Text style={styles.checkMark}>✓</Text>
+        ) : (
+          <View style={styles.emptyCheck} />
+        )}
+      </View>
+
+      {modal}
+    </TouchableOpacity>
   )
 }
 
