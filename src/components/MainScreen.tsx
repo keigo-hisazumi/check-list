@@ -3,12 +3,12 @@ import {
   View,
   StyleSheet,
   ScrollView,
-  Alert,
 } from 'react-native'
 import type { User } from 'firebase/auth'
 import { useChecklistConfigSync } from '../hooks/useChecklistConfigSync'
 import { NavigationBar } from './NavigationBar'
 import { Checklist, type ChecklistHandle } from './Checklist'
+import { ConfirmModal } from './ConfirmModal'
 import { saveChecklistLabel, deleteChecklistData, type ChecklistConfig } from '../firebase/firestore'
 import AsyncStorage from '@react-native-async-storage/async-storage'
 
@@ -24,6 +24,7 @@ export function MainScreen({ user, onSignOut }: Props) {
   const [isEditMode, setIsEditMode] = useState(false)
   const [stats, setStats] = useState({ completedCount: 0, totalCount: 0 })
   const [containerWidth, setContainerWidth] = useState(0)
+  const [showDeleteListConfirm, setShowDeleteListConfirm] = useState(false)
 
   const scrollRef = useRef<ScrollView>(null)
   const checklistRefs = useRef<Record<string, ChecklistHandle | null>>({})
@@ -117,43 +118,29 @@ export function MainScreen({ user, onSignOut }: Props) {
 
   const handleResetOrDelete = useCallback(() => {
     if (isEditMode) {
-      if (checklists.length <= 1) {
-        Alert.alert('削除できません', '最後のチェックリストは削除できません')
-        return
-      }
-      const checklist = checklists.find((c) => c.id === activeChecklistId)
-      if (!checklist) return
-      Alert.alert(
-        'チェックリストを削除',
-        `「${checklist.label}」を削除しますか？\n\n注意: チェックリスト内のすべてのデータが削除されます。`,
-        [
-          { text: 'キャンセル', style: 'cancel' },
-          {
-            text: '削除',
-            style: 'destructive',
-            onPress: async () => {
-              checklistRefs.current[activeChecklistId]?.stopFirestoreSync()
-              const index = checklists.findIndex((c) => c.id === activeChecklistId)
-              const newChecklists = checklists.filter((c) => c.id !== activeChecklistId)
-              setChecklists(newChecklists)
-
-              const prefix = `${user.uid}-${activeChecklistId}`
-              const keys = await AsyncStorage.getAllKeys()
-              const toDelete = keys.filter((k) => k.startsWith(prefix))
-              if (toDelete.length > 0) await AsyncStorage.removeMany(toDelete)
-
-              await deleteChecklistData(user.uid, activeChecklistId).catch(console.error)
-              const nextId = newChecklists[Math.max(0, index - 1)]?.id ?? newChecklists[0]?.id
-              setActiveChecklistId(nextId ?? '')
-              setIsEditMode(false)
-            },
-          },
-        ],
-      )
+      setShowDeleteListConfirm(true)
     } else {
       handleReset()
     }
-  }, [isEditMode, checklists, activeChecklistId, user.uid, setChecklists, setActiveChecklistId, handleReset])
+  }, [isEditMode, handleReset])
+
+  const confirmDeleteList = useCallback(async () => {
+    setShowDeleteListConfirm(false)
+    checklistRefs.current[activeChecklistId]?.stopFirestoreSync()
+    const index = checklists.findIndex((c) => c.id === activeChecklistId)
+    const newChecklists = checklists.filter((c) => c.id !== activeChecklistId)
+    setChecklists(newChecklists)
+
+    const prefix = `${user.uid}-${activeChecklistId}`
+    const keys = await AsyncStorage.getAllKeys()
+    const toDelete = keys.filter((k) => k.startsWith(prefix))
+    if (toDelete.length > 0) await AsyncStorage.removeMany(toDelete)
+
+    await deleteChecklistData(user.uid, activeChecklistId).catch(console.error)
+    const nextId = newChecklists[Math.max(0, index - 1)]?.id ?? newChecklists[0]?.id
+    setActiveChecklistId(nextId ?? '')
+    setIsEditMode(false)
+  }, [activeChecklistId, checklists, user.uid, setChecklists, setActiveChecklistId])
 
   const handleAddChecklist = useCallback(
     (name: string) => {
@@ -177,6 +164,8 @@ export function MainScreen({ user, onSignOut }: Props) {
   )
 
   if (checklists.length === 0) return null
+
+  const activeChecklist = checklists.find((c) => c.id === activeChecklistId)
 
   return (
     <View style={styles.container}>
@@ -219,6 +208,13 @@ export function MainScreen({ user, onSignOut }: Props) {
           </View>
         ))}
       </ScrollView>
+      <ConfirmModal
+        visible={showDeleteListConfirm}
+        title="チェックリストを削除"
+        message={`「${activeChecklist?.label}」を削除しますか？\n\n注意: チェックリスト内のすべてのデータが削除されます。`}
+        onConfirm={confirmDeleteList}
+        onCancel={() => setShowDeleteListConfirm(false)}
+      />
     </View>
   )
 }

@@ -56,18 +56,6 @@ export function NavigationBar({
     }
   }, [activeChecklistId, checklists])
 
-  const handleResetOrDelete = () => {
-    if (isEditMode) {
-      if (checklists.length <= 1) {
-        alert('最後のチェックリストは削除できません')
-        return
-      }
-      onResetOrDelete()
-    } else {
-      onResetOrDelete()
-    }
-  }
-
   return (
     <View style={[styles.container, { paddingTop: insets.top }]}>
       {/* Top row: tabs or rename input */}
@@ -141,8 +129,13 @@ export function NavigationBar({
             </Text>
           </TouchableOpacity>
           <TouchableOpacity
-            style={[styles.resetBtn, isEditMode && styles.deleteListBtn]}
-            onPress={handleResetOrDelete}
+            style={[
+              styles.resetBtn,
+              isEditMode && styles.deleteListBtn,
+              isEditMode && checklists.length <= 1 && styles.disabledBtn,
+            ]}
+            onPress={onResetOrDelete}
+            disabled={isEditMode && checklists.length <= 1}
           >
             <Text style={styles.resetBtnText}>
               {isEditMode ? 'リストを削除' : 'すべてリセット'}
@@ -340,6 +333,9 @@ const styles = StyleSheet.create({
   },
   deleteListBtn: {
     backgroundColor: '#dc3545',
+  },
+  disabledBtn: {
+    opacity: 0.4,
   },
   resetBtnText: {
     fontSize: 13,

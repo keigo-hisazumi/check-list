@@ -1,5 +1,5 @@
-import React, { forwardRef, useImperativeHandle, useCallback } from 'react'
-import { View, TouchableOpacity, Text, StyleSheet, Alert } from 'react-native'
+import React, { forwardRef, useImperativeHandle, useCallback, useState } from 'react'
+import { View, TouchableOpacity, Text, StyleSheet } from 'react-native'
 import DraggableFlatList, {
   type RenderItemParams,
 } from 'react-native-draggable-flatlist'
@@ -7,6 +7,7 @@ import type { User } from 'firebase/auth'
 import { useChecklist } from '../hooks/useChecklist'
 import { ChecklistItem } from './ChecklistItem'
 import { PromptModal } from './PromptModal'
+import { ConfirmModal } from './ConfirmModal'
 import type { ChecklistItem as Item, ChecklistConfig } from '../firebase/firestore'
 
 interface Props {
@@ -24,7 +25,8 @@ export interface ChecklistHandle {
 
 export const Checklist = forwardRef<ChecklistHandle, Props>(
   ({ checklist, user, isActive, isEditMode, onStatsChange }, ref) => {
-    const [addModalVisible, setAddModalVisible] = React.useState(false)
+    const [addModalVisible, setAddModalVisible] = useState(false)
+    const [deleteTarget, setDeleteTarget] = useState<Item | null>(null)
 
     const {
       items,
@@ -47,24 +49,6 @@ export const Checklist = forwardRef<ChecklistHandle, Props>(
 
     useImperativeHandle(ref, () => ({ handleReset, stopFirestoreSync }), [handleReset, stopFirestoreSync])
 
-    const handleDelete = useCallback(
-      (item: Item) => {
-        Alert.alert(
-          '項目を削除',
-          `「${item.label}」を削除しますか？`,
-          [
-            { text: 'キャンセル', style: 'cancel' },
-            {
-              text: '削除',
-              style: 'destructive',
-              onPress: () => deleteItem(item.id),
-            },
-          ],
-        )
-      },
-      [deleteItem],
-    )
-
     const renderItem = useCallback(
       ({ item, drag, isActive: isDragging }: RenderItemParams<Item>) => (
         <ChecklistItem
@@ -75,11 +59,11 @@ export const Checklist = forwardRef<ChecklistHandle, Props>(
           isDragging={isDragging}
           drag={isEditMode ? drag : undefined}
           onCheck={() => handleCheck(item.id)}
-          onDelete={() => handleDelete(item)}
+          onDelete={() => setDeleteTarget(item)}
           onUpdateLabel={(label) => updateItemLabel(item.id, label)}
         />
       ),
-      [checkedState, isEditMode, handleCheck, handleDelete, updateItemLabel],
+      [checkedState, isEditMode, handleCheck, updateItemLabel],
     )
 
     return (
@@ -109,6 +93,16 @@ export const Checklist = forwardRef<ChecklistHandle, Props>(
             setAddModalVisible(false)
           }}
           onCancel={() => setAddModalVisible(false)}
+        />
+        <ConfirmModal
+          visible={deleteTarget !== null}
+          title="項目を削除"
+          message={deleteTarget ? `「${deleteTarget.label}」を削除しますか？` : undefined}
+          onConfirm={() => {
+            if (deleteTarget) deleteItem(deleteTarget.id)
+            setDeleteTarget(null)
+          }}
+          onCancel={() => setDeleteTarget(null)}
         />
       </View>
     )
