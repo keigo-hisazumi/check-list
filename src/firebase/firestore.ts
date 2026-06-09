@@ -78,7 +78,7 @@ export async function saveChecklistData(
   data: ChecklistData,
 ): Promise<void> {
   const ref = doc(db, 'users', uid, 'checklists', checklistId)
-  await setDoc(ref, data)
+  await setDoc(ref, data, { merge: true })
 }
 
 export async function saveChecklistLabel(
