@@ -65,6 +65,7 @@ export function useChecklist({
     if (!hasSyncedRef.current) return
     if (saveTimerRef.current) clearTimeout(saveTimerRef.current)
     saveTimerRef.current = setTimeout(async () => {
+      saveTimerRef.current = null
       if (!uid) return
       const data = await buildChecklistData()
       const json = serializeForCompare(data)
