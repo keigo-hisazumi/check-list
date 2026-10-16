@@ -57,14 +57,14 @@ jobs:
         run: npm run type-check
 
       - name: ビルド
-        run: npm run build-only
+        run: npm run build
 
       - name: 開発サーバーの起動
-        run: npm run dev &
+        run: npm run web &
 
       - name: サーバーの起動待機
         run: |
           timeout 60 bash -c \
-            'until curl -sf http://localhost:5173 > /dev/null; \
+            'until curl -sf http://localhost:8081 > /dev/null; \
             do sleep 2; done' || exit 1
           echo "Development server is ready"
