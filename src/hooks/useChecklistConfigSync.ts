@@ -1,4 +1,4 @@
-import { useState, useEffect, useRef, useCallback } from 'react'
+import { useState, useEffect, useLayoutEffect, useRef, useCallback } from 'react'
 import type { User } from 'firebase/auth'
 import AsyncStorage from '@react-native-async-storage/async-storage'
 import {
@@ -34,7 +34,10 @@ export function useChecklistConfigSync(user: User | null) {
   const isSavingRef = useRef(false)
   const labelDocsRef = useRef<Array<{ id: string; label?: string }>>([])
   const checklistsRef = useRef(checklists)
-  checklistsRef.current = checklists
+  // コールバックから最新値を参照するため、コミット直後に ref を同期する
+  useLayoutEffect(() => {
+    checklistsRef.current = checklists
+  })
 
   const lsKey = useCallback(
     () => `checklists-config-${user?.uid ?? 'guest'}`,
@@ -59,8 +62,8 @@ export function useChecklistConfigSync(user: User | null) {
     }
   }, [lsKey])
 
-  const saveToFirestore = useCallback(
-    async (uid: string, lists: ChecklistConfig[]) => {
+  const saveToFirestore = useCallback((uid: string, lists: ChecklistConfig[]) => {
+    const save = async (lists: ChecklistConfig[]): Promise<void> => {
       if (!hasSyncedRef.current) return
       const ids = lists.map((c) => c.id)
       const idsJson = JSON.stringify(ids)
@@ -77,18 +80,20 @@ export function useChecklistConfigSync(user: User | null) {
         isSavingRef.current = false
         const currentIds = JSON.stringify(checklistsRef.current.map((c) => c.id))
         if (currentIds !== lastSavedIdsRef.current) {
-          saveToFirestore(uid, checklistsRef.current)
+          save(checklistsRef.current)
         }
       }
-    },
-    [],
-  )
+    }
+    return save(lists)
+  }, [])
 
   // Load from storage when user changes
   useEffect(() => {
     hasSyncedRef.current = false
     lastSavedIdsRef.current = ''
     labelDocsRef.current = []
+    // AsyncStorage（外部ストレージ）からの読み込み結果を state に反映する正当なユースケースのため
+    // eslint-disable-next-line react-hooks/set-state-in-effect
     loadFromStorage()
   }, [user?.uid, loadFromStorage])
 
