@@ -5,7 +5,7 @@ import {
   TouchableOpacity,
   StyleSheet,
 } from 'react-native'
-import Svg, { Path, Rect } from 'react-native-svg'
+import Svg, { Path } from 'react-native-svg'
 import { PromptModal } from './PromptModal'
 
 interface Props {
@@ -55,7 +55,6 @@ function TrashIcon({ size = 20, color = '#dc3545' }: { size?: number; color?: st
 }
 
 export function ChecklistItem({
-  id,
   label,
   checked,
   isEditMode,

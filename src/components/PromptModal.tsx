@@ -23,9 +23,16 @@ export function PromptModal({ visible, title, defaultValue = '', placeholder, on
   const [text, setText] = useState(defaultValue)
   const inputRef = useRef<TextInput>(null)
 
+  // モーダルを開いたとき・初期値が変わったときに入力欄を初期化する（レンダー中に前回の props と比較する方式）
+  // https://react.dev/learn/you-might-not-need-an-effect#adjusting-some-state-when-a-prop-changes
+  const [prevProps, setPrevProps] = useState({ visible, defaultValue })
+  if (prevProps.visible !== visible || prevProps.defaultValue !== defaultValue) {
+    setPrevProps({ visible, defaultValue })
+    if (visible) setText(defaultValue)
+  }
+
   useEffect(() => {
     if (visible) {
-      setText(defaultValue)
       setTimeout(() => inputRef.current?.focus(), 100)
     }
   }, [visible, defaultValue])

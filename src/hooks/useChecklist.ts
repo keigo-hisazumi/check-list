@@ -1,4 +1,4 @@
-import { useState, useEffect, useRef, useCallback } from 'react'
+import { useState, useEffect, useLayoutEffect, useRef, useCallback } from 'react'
 import AsyncStorage from '@react-native-async-storage/async-storage'
 import {
   subscribeChecklistData,
@@ -37,8 +37,11 @@ export function useChecklist({
   const firestoreUnsubRef = useRef<Unsubscribe | null>(null)
   const itemsRef = useRef(items)
   const checkedStateRef = useRef(checkedState)
-  itemsRef.current = items
-  checkedStateRef.current = checkedState
+  // コールバックから最新値を参照するため、コミット直後に ref を同期する
+  useLayoutEffect(() => {
+    itemsRef.current = items
+    checkedStateRef.current = checkedState
+  })
 
   const lsPrefix = useCallback(
     () => `${uid ?? 'guest'}-${checklistId}`,
