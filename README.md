@@ -1,54 +1,87 @@
 # チェックリスト
 
-持ち物を確認するためのVue.js + TypeScriptベースのチェックリストアプリケーションです。
+持ち物を確認するためのチェックリストアプリです。Expo（React Native）で作られており、ログインするとチェックリストとチェック状態が Firebase でクラウド同期されます。
 
-🌐 **ライブデモ**: [https://keigo-hisazumi.github.io/check-list/](https://keigo-hisazumi.github.io/check-list/)
+公開 URL: <https://keigo-hisazumi.github.io/check-list/>
 
-## 機能
+## 主な機能
 
-- ✅ チェックボックスで項目を確認
-- 💾 Firebaseによるチェック状態のクラウド同期・永続化
-- 👤 メールアドレス/パスワードによるユーザー認証
-- 📋 複数チェックリストの作成・管理・削除
-- ✏️ チェックリスト名・項目名のインライン編集
-- ➕ カスタム項目の追加・削除
-- 👆 スワイプでチェックリストを切り替え
-- 📱 レスポンシブデザイン対応
-- 🔄 チェック状態をリセットする機能
-- 📊 進捗状況の表示
+- タップで項目をチェック / チェック解除
+- メールアドレス / パスワードによるユーザー登録とログイン
+- Firebase（Firestore）によるチェックリストとチェック状態のクラウド同期・永続化
+- 複数チェックリストの作成・名前の変更・削除
+- 項目の追加・名前の変更・削除・ドラッグでの並び替え
+- タブまたは左右スワイプでチェックリストを切り替え
+- チェック状態をまとめて外す「すべてリセット」
+- 進捗（完了数 / 項目数）の表示
+- 初回はチュートリアル用のチェックリストを表示
 
-## セットアップ
+## 使い方
 
-```bash
-# 依存関係のインストール
-npm install
+1. メールアドレスとパスワードで新規登録またはログインする
+2. 項目をタップしてチェックを入れる（「すべてリセット」でまとめて外せる）
+3. 「項目を編集」で編集モードに切り替え、項目の追加・名前の変更・削除・ドラッグでの並び替えを行う（編集モードではチェックリスト名の変更と「リストを削除」もできる）
+4. 上部の「＋」ボタンで新しいチェックリストを作成し、タブまたは左右スワイプで切り替える
+5. 右上のアバターからログアウトする
 
-# 開発サーバーの起動
-npm run dev
+## データの保存と同期
 
-# プロダクションビルド
-npm run build
-
-# プロダクションビルドのプレビュー
-npm run preview
-```
+- チェックリストの一覧・項目・チェック状態は端末（AsyncStorage）に保存し、ログイン中は Firestore の `users/<uid>/` 配下と同期します
+- Firebase の接続設定は `src/firebase/index.ts` にあります
 
 ## 技術スタック
 
-- Vue 3 (Composition API)
 - TypeScript
-- Vite 7
-- Firebase (Authentication / Firestore)
+- React / React Native
+- Expo（Expo Router、Web 版は react-native-web）
+- Firebase（Authentication / Firestore）
+- react-native-draggable-flatlist（項目の並び替え）
+- ESLint
+- GitHub Pages（Web 版のホスティング）
+
+## 開発
+
+### 必要な環境
+
+- Node.js 22（CI・デプロイのワークフローと同じバージョン）
+- npm
+
+### コマンド
+
+```bash
+npm ci                # 依存関係のインストール
+npm run start         # Expo の開発サーバーを起動
+npm run web           # Web 版で起動
+npm run android       # Android で起動
+npm run ios           # iOS で起動
+npm run lint          # ESLint
+npm run type-check    # TypeScript の型チェック
+npm run build         # Web 版を dist/ に書き出し（expo export --platform web）
+```
+
+## ディレクトリ構成
+
+```text
+app/
+  _layout.tsx       ルートレイアウト（Expo Router）
+  index.tsx         ログイン状態に応じてログイン画面 / メイン画面を表示
+  +html.tsx         Web 版の HTML テンプレート
+src/
+  components/       画面と UI コンポーネント（ログイン・メイン画面・ナビゲーション・モーダルなど）
+  hooks/            認証・チェックリスト・設定同期のフック
+  firebase/         Firebase の初期化と Firestore の読み書き
+public/             Web App Manifest・アイコン・favicon
+app.json            Expo の設定（Web 版のベースパス `/check-list` を含む）
+```
 
 ## デプロイ
 
-このアプリケーションはGitHub Pagesに自動デプロイされます。
+- `main` への PR マージ時に `.github/workflows/deploy.yml` が Web 版をビルドして GitHub Pages へデプロイします（Actions の画面から手動実行も可能）
+- PR ごとに `.github/workflows/pr-preview.yml` がプレビューを `gh-pages` ブランチの `pr-<番号>/` に公開し、URL と QR コードを PR にコメントします（PR クローズ時に削除）
 
-- mainブランチへのプッシュで自動的にデプロイが実行されます
-- Pull Request作成時に `gh-pages` ブランチ配下へ**PRプレビュー**が自動デプロイされます
-- プレビューURL（`/check-list/pr-<PR番号>/`）はPRコメントに自動投稿/更新されます
-- GitHub Actionsワークフローが自動的にビルドとデプロイを行います
-- デプロイされたアプリケーションは [https://keigo-hisazumi.github.io/check-list/](https://keigo-hisazumi.github.io/check-list/) でアクセス可能です
+## 開発ルール
+
+開発ルールは [AGENTS.md](./AGENTS.md) を参照してください。
 
 ## ライセンス
 
