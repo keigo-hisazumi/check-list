@@ -53,4 +53,3 @@ npm run preview
 ## ライセンス
 
 MIT
-
