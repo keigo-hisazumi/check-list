@@ -1,9 +1,13 @@
-import { ScrollViewStyleReset } from 'expo-router/html'
+import { ScrollViewStyleReset, useServerDocumentContext } from 'expo-router/html'
 import type { PropsWithChildren } from 'react'
 
 export default function Root({ children }: PropsWithChildren) {
+  // Expo SDK 58 以降、JS バンドルの script タグや react-native-web のスタイルは
+  // headNodes / bodyNodes として渡されるため、自前で描画しないとアプリが起動しない
+  const { htmlAttributes, headNodes, bodyAttributes, bodyNodes } = useServerDocumentContext()
+
   return (
-    <html lang="ja">
+    <html lang="ja" {...htmlAttributes}>
       <head>
         <meta charSet="utf-8" />
         <meta httpEquiv="X-UA-Compatible" content="IE=edge" />
@@ -18,8 +22,12 @@ export default function Root({ children }: PropsWithChildren) {
         <link rel="apple-touch-icon" href="./apple-touch-icon.png" />
         <link rel="manifest" href="./manifest.webmanifest" />
         <ScrollViewStyleReset />
+        {headNodes}
       </head>
-      <body>{children}</body>
+      <body {...bodyAttributes}>
+        {children}
+        {bodyNodes}
+      </body>
     </html>
   )
 }
