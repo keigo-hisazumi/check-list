@@ -4,6 +4,7 @@ import {
   StyleSheet,
   ScrollView,
 } from 'react-native'
+import type { ScrollViewInstance } from 'react-native'
 import type { User } from 'firebase/auth'
 import { useChecklistConfigSync } from '../hooks/useChecklistConfigSync'
 import { NavigationBar } from './NavigationBar'
@@ -27,7 +28,7 @@ export function MainScreen({ user, onSignOut }: Props) {
   const [containerHeight, setContainerHeight] = useState(0)
   const [showDeleteListConfirm, setShowDeleteListConfirm] = useState(false)
 
-  const scrollRef = useRef<ScrollView>(null)
+  const scrollRef = useRef<ScrollViewInstance>(null)
   const checklistRefs = useRef<Record<string, ChecklistHandle | null>>({})
   // True while a programmatic scrollTo is in flight — suppresses user-swipe tab updates.
   const isProgrammaticScroll = useRef(false)

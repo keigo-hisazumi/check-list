@@ -9,6 +9,7 @@ import {
   KeyboardAvoidingView,
   Platform,
 } from 'react-native'
+import type { TextInputInstance } from 'react-native'
 
 interface Props {
   visible: boolean
@@ -21,7 +22,7 @@ interface Props {
 
 export function PromptModal({ visible, title, defaultValue = '', placeholder, onConfirm, onCancel }: Props) {
   const [text, setText] = useState(defaultValue)
-  const inputRef = useRef<TextInput>(null)
+  const inputRef = useRef<TextInputInstance>(null)
 
   // モーダルを開いたとき・初期値が変わったときに入力欄を初期化する（レンダー中に前回の props と比較する方式）
   // https://react.dev/learn/you-might-not-need-an-effect#adjusting-some-state-when-a-prop-changes
