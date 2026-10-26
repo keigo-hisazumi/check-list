@@ -191,11 +191,6 @@ export function NavigationBar({
 const styles = StyleSheet.create({
   container: {
     backgroundColor: 'white',
-    shadowColor: '#000',
-    shadowOffset: { width: 0, height: 2 },
-    shadowOpacity: 0.15,
-    shadowRadius: 8,
-    elevation: 8,
     zIndex: 100,
   },
   topRow: {
