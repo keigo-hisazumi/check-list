@@ -8,6 +8,7 @@ import {
   Image,
   Modal,
 } from 'react-native'
+import type { ScrollViewInstance } from 'react-native'
 import { useSafeAreaInsets } from 'react-native-safe-area-context'
 import type { User } from 'firebase/auth'
 import type { ChecklistConfig } from '../firebase/firestore'
@@ -41,7 +42,7 @@ export function NavigationBar({
   onResetOrDelete,
 }: Props) {
   const insets = useSafeAreaInsets()
-  const scrollRef = useRef<ScrollView>(null)
+  const scrollRef = useRef<ScrollViewInstance>(null)
   const [menuVisible, setMenuVisible] = useState(false)
   const [addModalVisible, setAddModalVisible] = useState(false)
   const [renameModalVisible, setRenameModalVisible] = useState(false)

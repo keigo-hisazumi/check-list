@@ -80,7 +80,7 @@ export const Checklist = forwardRef<ChecklistHandle, Props>(
               <TouchableOpacity style={styles.addBtn} onPress={() => setAddModalVisible(true)}>
                 <Text style={styles.addBtnText}>＋ 新しい項目を追加</Text>
               </TouchableOpacity>
-            ) : null
+            ) : undefined
           }
         />
         <PromptModal
