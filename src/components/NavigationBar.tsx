@@ -7,12 +7,18 @@ import {
   StyleSheet,
   Image,
   Modal,
+  Platform,
 } from 'react-native'
-import type { ScrollViewInstance } from 'react-native'
+import type { ScrollViewInstance, ViewStyle } from 'react-native'
 import { useSafeAreaInsets } from 'react-native-safe-area-context'
 import type { User } from 'firebase/auth'
 import type { ChecklistConfig } from '../firebase/firestore'
 import { PromptModal } from './PromptModal'
+
+// iOS 26 の Safari は画面上端に固定（fixed / sticky）された要素がないと、ステータスバー付近のコンテンツにぼかしをかける。
+// Web ではヘッダーを sticky にして、ぼかしの代わりにヘッダーの背景色で塗りつぶさせる。
+// React Native の型には 'sticky' がないためキャストしている（react-native-web はそのまま CSS に出力する）
+const webStickyHeader = { position: 'sticky', top: 0 } as unknown as ViewStyle
 
 interface Props {
   checklists: ChecklistConfig[]
@@ -57,7 +63,7 @@ export function NavigationBar({
   }, [activeChecklistId, checklists])
 
   return (
-    <View style={[styles.container, { paddingTop: insets.top }]}>
+    <View style={[styles.container, Platform.OS === 'web' && webStickyHeader, { paddingTop: insets.top }]}>
       {/* Top row: tabs or rename input */}
       <View style={styles.topRow}>
         {isEditMode ? (
