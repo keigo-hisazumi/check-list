@@ -1,8 +1,8 @@
 # チェックリスト
 
-持ち物を確認するためのチェックリストアプリです。Expo（React Native）で作られており、ログインするとチェックリストとチェック状態が Firebase でクラウド同期されます。
+持ち物を確認するためのチェックリストアプリです。複数のリストを作り、項目をタップしてチェックできます。
 
-公開 URL: <https://keigo-hisazumi.github.io/check-list/>
+**公開 URL**: <https://keigo-hisazumi.github.io/check-list/>
 
 ## 主な機能
 
