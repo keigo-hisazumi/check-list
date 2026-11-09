@@ -32,12 +32,12 @@
     "react-native-web": "~0.21.4"
   },
   "devDependencies": {
-    "@babel/core": "^7.25.0",
+    "@babel/core": "^7.29.13",
     "@eslint/js": "^10.0.1",
     "@types/react": "~19.3.0",
-    "eslint": "^10.13.0",
+    "eslint": "^10.14.0",
     "eslint-plugin-react-hooks": "^7.1.1",
-    "globals": "^17.13.0",
+    "globals": "^17.14.0",
     "sharp": "^0.35.5",
     "typescript": "~6.0.3",
     "typescript-eslint": "^8.72.1"
