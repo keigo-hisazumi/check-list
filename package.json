@@ -10,7 +10,11 @@
     "web": "expo start --web",
     "build": "expo export --platform web",
     "type-check": "tsc --noEmit",
-    "lint": "eslint ."
+    "lint": "eslint .",
+    "icons": "pwa-assets-generator",
+    "prebuild": "npm run icons",
+    "prestart": "npm run icons",
+    "preweb": "npm run icons"
   },
   "dependencies": {
     "@expo/metro-runtime": "~58.0.17",
@@ -35,6 +39,7 @@
     "@babel/core": "^7.29.13",
     "@eslint/js": "^10.0.1",
     "@types/react": "~19.3.0",
+    "@vite-pwa/assets-generator": "^2.0.0",
     "eslint": "^10.14.0",
     "eslint-plugin-react-hooks": "^7.1.1",
     "globals": "^17.14.0",
